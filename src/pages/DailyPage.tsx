@@ -7,33 +7,31 @@ import {
   isFuture,
   formatDateHuman,
 } from '../utils/dateHelpers'
+import { useDailyEntry } from '../hooks/useDailyEntry'
 import EnergyScale from '../components/EnergyScale'
 import MorningBlock from '../components/MorningBlock'
 import TaskList from '../components/TaskList'
 import EveningBlock from '../components/EveningBlock'
 
-interface TaskItem {
-  id: number
-  title: string
-  isCompleted: boolean
-}
-
 export default function DailyPage() {
   const [selectedDate, setSelectedDate] = useState(getToday())
-  const [energyLevel, setEnergyLevel] = useState<number | undefined>(undefined)
 
-  // Утренний блок
-  const [intention, setIntention] = useState('')
-  const [gratitude, setGratitude] = useState('')
-  const [priorities, setPriorities] = useState<string[]>(['', '', ''])
-
-  // Список задач
-  const [tasks, setTasks] = useState<TaskItem[]>([])
-
-  // Вечерний блок
-  const [win, setWin] = useState('')
-  const [lesson, setLesson] = useState('')
-  const [tomorrow, setTomorrow] = useState('')
+  // Хук — загрузка, сохранение, все функции
+  const {
+    entry,
+    tasks,
+    isLoading,
+    updateEnergy,
+    updateIntention,
+    updateGratitude,
+    updatePriorities,
+    updateWin,
+    updateLesson,
+    updateTomorrow,
+    addTask,
+    toggleTask,
+    deleteTask,
+  } = useDailyEntry(selectedDate)
 
   function goToPrevDay() {
     setSelectedDate(prev => getPrevDay(prev))
@@ -51,6 +49,14 @@ export default function DailyPage() {
     if (isToday(selectedDate)) return '📌 Сегодня'
     if (isFuture(selectedDate)) return '🔮 Будущий день'
     return '📖 Прошедший день'
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto text-center text-text-light">
+        Загрузка...
+      </div>
+    )
   }
 
   return (
@@ -102,35 +108,40 @@ export default function DailyPage() {
 
       {/* === ШКАЛА ЭНЕРГИИ === */}
       <div className="mb-4">
-        <EnergyScale value={energyLevel} onChange={setEnergyLevel} />
+        <EnergyScale value={entry.energyLevel} onChange={updateEnergy} />
       </div>
 
       {/* === УТРЕННИЙ БЛОК === */}
       <div className="mb-4">
         <MorningBlock
-          intention={intention}
-          gratitude={gratitude}
-          priorities={priorities}
-          onIntentionChange={setIntention}
-          onGratitudeChange={setGratitude}
-          onPrioritiesChange={setPriorities}
+          intention={entry.morningIntention || ''}
+          gratitude={entry.morningGratitude || ''}
+          priorities={entry.morningPriorities || ['', '', '']}
+          onIntentionChange={updateIntention}
+          onGratitudeChange={updateGratitude}
+          onPrioritiesChange={updatePriorities}
         />
       </div>
 
       {/* === СПИСОК ЗАДАЧ === */}
       <div className="mb-4">
-        <TaskList tasks={tasks} onTasksChange={setTasks} />
+        <TaskList
+          tasks={tasks}
+          onAdd={addTask}
+          onToggle={toggleTask}
+          onDelete={deleteTask}
+        />
       </div>
 
       {/* === ВЕЧЕРНИЙ БЛОК === */}
       <div className="mb-4">
         <EveningBlock
-          win={win}
-          lesson={lesson}
-          tomorrow={tomorrow}
-          onWinChange={setWin}
-          onLessonChange={setLesson}
-          onTomorrowChange={setTomorrow}
+          win={entry.eveningWin || ''}
+          lesson={entry.eveningLesson || ''}
+          tomorrow={entry.eveningTomorrow || ''}
+          onWinChange={updateWin}
+          onLessonChange={updateLesson}
+          onTomorrowChange={updateTomorrow}
         />
       </div>
 
