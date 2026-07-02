@@ -15,6 +15,10 @@ import type {
   Achievement,
   Combo,
   UserSettings,
+  DescartesSquare,
+  EisenhowerItem,
+  ThreePResult,
+  CoachingSession,
 } from '../types'
 
 // Класс нашей базы данных
@@ -30,26 +34,46 @@ class TyzhManagerDB extends Dexie {
   achievements!: Table<Achievement>
   combos!: Table<Combo>
   userSettings!: Table<UserSettings>
+  // Новые таблицы — Оценка целей
+  descartesSquares!: Table<DescartesSquare>
+  eisenhowerItems!: Table<EisenhowerItem>
+  threePResults!: Table<ThreePResult>
+  coachingSessions!: Table<CoachingSession>
 
   constructor() {
     super('tyzhmanager-db') // Имя базы данных в браузере
 
     // Версия 1 — начальная структура
     this.version(1).stores({
-      // Формат: 'название таблицы': 'ключ, индекс1, индекс2, ...'
-      // ++id = автоматический счётчик (1, 2, 3...)
-      // Остальные поля — индексы для быстрого поиска
-
       strategies:     '++id, sphere, deadline, order',
       goals:          '++id, strategyId, sphere, year, status, order',
       ppSmarts:       '++id, goalId',
       actionSteps:    '++id, goalId, parentId, isCompleted, order',
-      dailyEntries:   '++id, &date',          // &date = уникальная дата (1 запись на день)
+      dailyEntries:   '++id, &date',
       tasks:          '++id, dailyEntryId, goalId, date, isCompleted, order',
       goalEvaluations:'++id, goalId, date',
       achievements:   '++id, type, isUnlocked',
       combos:         '++id, type',
       userSettings:   '++id',
+    })
+
+    // Версия 2 — добавляем таблицы оценки целей
+    this.version(2).stores({
+      strategies:       '++id, sphere, deadline, order',
+      goals:            '++id, strategyId, sphere, year, status, order',
+      ppSmarts:         '++id, goalId',
+      actionSteps:      '++id, goalId, parentId, isCompleted, order',
+      dailyEntries:     '++id, &date',
+      tasks:            '++id, dailyEntryId, goalId, date, isCompleted, order',
+      goalEvaluations:  '++id, goalId, date',
+      achievements:     '++id, type, isUnlocked',
+      combos:           '++id, type',
+      userSettings:     '++id',
+      // Новые таблицы
+      descartesSquares: '++id, goalId',
+      eisenhowerItems:  '++id, goalId, quadrant',
+      threePResults:    '++id, goalId',
+      coachingSessions: '++id, goalId, isCompleted',
     })
   }
 }

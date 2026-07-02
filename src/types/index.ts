@@ -134,3 +134,65 @@ export interface UserSettings {
   createdAt: string
   updatedAt: string
 }
+
+// ==========================================
+// ОЦЕНКА ЦЕЛЕЙ — 4 инструмента
+// ==========================================
+
+// Квадрат Декарта — 4 вопроса, на каждый минимум 3 ответа
+export interface DescartesSquare {
+  id?: number
+  goalId: number
+  // 4 квадранта — массивы ответов (минимум 3 в каждом)
+  doPositive: string[]     // Что случится, если СДЕЛАЮ?
+  dontNegative: string[]   // Что случится, если НЕ сделаю?
+  doNegative: string[]     // Чего НЕ случится, если СДЕЛАЮ?
+  dontPositive: string[]   // Чего НЕ случится, если НЕ сделаю?
+  recommendation: 'do' | 'dont' | 'unclear'  // Результат
+  createdAt: string
+  updatedAt: string
+}
+
+// Матрица Эйзенхауэра — позиция цели в матрице
+export type EisenhowerQuadrant =
+  | 'urgent-important'      // 🔴 Делай сейчас
+  | 'not-urgent-important'  // 🟡 Запланируй
+  | 'urgent-not-important'  // 🔵 Делегируй
+  | 'not-urgent-not-important' // ⚪ Подумай, нужно ли
+
+export interface EisenhowerItem {
+  id?: number
+  goalId: number
+  quadrant: EisenhowerQuadrant
+  createdAt: string
+  updatedAt: string
+}
+
+// Метод 3П — простой фильтр ДА/НЕТ
+export type ThreePPriority =
+  | 'absolute'  // 3 ДА — Абсолютный приоритет
+  | 'high'      // 2 ДА — Высокий
+  | 'low'       // 1 ДА — Низкий
+  | 'trash'     // 3 НЕТ — Мусор
+
+export interface ThreePResult {
+  id?: number
+  goalId: number
+  approaching: boolean    // Приближение — приближает к цели?
+  consequences: boolean   // Последствия — последствия бездействия критичны?
+  profit: boolean         // Профит — есть ощутимая выгода?
+  priority: ThreePPriority
+  createdAt: string
+  updatedAt: string
+}
+
+// Мини-самокоучинг — 10 вопросов
+export interface CoachingSession {
+  id?: number
+  goalId: number
+  answers: string[]       // 10 ответов (по индексу вопроса)
+  currentStep: number     // Текущий шаг (0-9) для wizard
+  isCompleted: boolean    // Все 10 вопросов отвечены
+  createdAt: string
+  updatedAt: string
+}
