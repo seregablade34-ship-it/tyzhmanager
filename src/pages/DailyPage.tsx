@@ -8,6 +8,7 @@ import {
   formatDateHuman,
 } from '../utils/dateHelpers'
 import { useDailyEntry } from '../hooks/useDailyEntry'
+import { getDailyQuote } from '../utils/quotes'
 import EnergyScale from '../components/EnergyScale'
 import MorningBlock from '../components/MorningBlock'
 import TaskList from '../components/TaskList'
@@ -16,7 +17,6 @@ import EveningBlock from '../components/EveningBlock'
 export default function DailyPage() {
   const [selectedDate, setSelectedDate] = useState(getToday())
 
-  // Хук — загрузка, сохранение, все функции
   const {
     entry,
     tasks,
@@ -32,6 +32,9 @@ export default function DailyPage() {
     toggleTask,
     deleteTask,
   } = useDailyEntry(selectedDate)
+
+  // Цитата дня
+  const quote = getDailyQuote()
 
   function goToPrevDay() {
     setSelectedDate(prev => getPrevDay(prev))
@@ -63,7 +66,7 @@ export default function DailyPage() {
     <div className="p-6 max-w-3xl mx-auto">
 
       {/* === НАВИГАЦИЯ ПО ДАТАМ === */}
-      <div className="bg-surface border border-border rounded-xl p-4 mb-6">
+      <div className="bg-surface border border-border rounded-xl p-4 mb-4">
         <div className="flex items-center justify-between">
           <button
             onClick={goToPrevDay}
@@ -104,6 +107,17 @@ export default function DailyPage() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* === ЦИТАТА ДНЯ === */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl px-5 py-3 mb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-lg">💬</span>
+          <p className="text-sm text-text italic leading-relaxed flex-1">
+            «{quote.text}»
+            <span className="not-italic text-text-light ml-2">— {quote.author}</span>
+          </p>
+        </div>
       </div>
 
       {/* === ШКАЛА ЭНЕРГИИ === */}
