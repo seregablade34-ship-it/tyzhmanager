@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   getToday,
   getPrevDay,
@@ -9,6 +9,8 @@ import {
 } from '../utils/dateHelpers'
 import { useDailyEntry } from '../hooks/useDailyEntry'
 import { getDailyQuote } from '../utils/quotes'
+import { db } from '../db/database'
+import type { Goal } from '../types'
 import EnergyScale from '../components/EnergyScale'
 import MorningBlock from '../components/MorningBlock'
 import TaskList from '../components/TaskList'
@@ -16,6 +18,7 @@ import EveningBlock from '../components/EveningBlock'
 
 export default function DailyPage() {
   const [selectedDate, setSelectedDate] = useState(getToday())
+  const [goals, setGoals] = useState<Goal[]>([])
 
   const {
     entry,
@@ -37,6 +40,20 @@ export default function DailyPage() {
     toggleSubtask,
     deleteSubtask,
   } = useDailyEntry(selectedDate)
+
+  // Загрузка целей для импорта
+  useEffect(() => {
+    db.goals.orderBy('order').toArray().then(setGoals).catch(console.error)
+  }, [])
+
+  // Подготовка целей для TaskList
+  const importGoals = goals
+    .filter(g => g.status === 'active')
+    .map(g => ({
+      id: g.id!,
+      title: g.title,
+      sphere: g.sphere,
+    }))
 
   function goToPrevDay() {
     setSelectedDate(prev => getPrevDay(prev))
@@ -157,6 +174,7 @@ export default function DailyPage() {
           onAddSubtask={addSubtask}
           onToggleSubtask={toggleSubtask}
           onDeleteSubtask={deleteSubtask}
+          importGoals={importGoals}
         />
       </div>
 

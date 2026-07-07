@@ -1,4 +1,5 @@
-import type { Goal } from '../types'
+import type { Goal, MonthProgress } from '../types'
+import MonthlyTracker, { createEmptyMonthly } from './MonthlyTracker'
 
 const SPHERE_ICONS: Record<string, string> = {
   'Здоровье': '💪',
@@ -25,6 +26,7 @@ interface GoalCardProps {
   onProgressChange: (id: number, progress: number) => void
   onComplete: (goal: Goal) => void
   onFail: (goal: Goal) => void
+  onMonthlyChange: (id: number, monthly: MonthProgress[]) => void
 }
 
 export default function GoalCard({
@@ -35,9 +37,11 @@ export default function GoalCard({
   onProgressChange,
   onComplete,
   onFail,
+  onMonthlyChange,
 }: GoalCardProps) {
   const icon = SPHERE_ICONS[goal.sphere] || '🎯'
   const status = STATUS_LABELS[goal.status] || STATUS_LABELS.active
+  const monthly = goal.monthlyProgress || createEmptyMonthly()
 
   // Цвет прогресс-бара
   function getProgressColor(progress: number): string {
@@ -151,6 +155,13 @@ export default function GoalCard({
           </div>
         )}
       </div>
+
+      {/* ===== ТРЕКЕР ПО МЕСЯЦАМ ===== */}
+      <MonthlyTracker
+        monthly={monthly}
+        onChange={(updated) => onMonthlyChange(goal.id!, updated)}
+        disabled={goal.status !== 'active'}
+      />
 
       {/* ===== КНОПКИ ВЫПОЛНЕНО / НЕ ВЫПОЛНЕНО ===== */}
       {goal.status === 'active' && (

@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
 import { db } from '../db/database'
-import type { Goal, ActionStep } from '../types'
+import type { Goal, Strategy, ActionStep } from '../types'
 import ActionStepItem from '../components/ActionStepItem'
+
 
 export default function ActionCascadePage() {
   const [goals, setGoals] = useState<Goal[]>([])
+  const [strategies, setStrategies] = useState<Strategy[]>([])
   const [steps, setSteps] = useState<ActionStep[]>([])
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Импорт
+  const [showImport, setShowImport] = useState(false)
 
   // Форма добавления/редактирования
   const [showForm, setShowForm] = useState(false)
@@ -24,11 +29,13 @@ export default function ActionCascadePage() {
 
   async function loadData() {
     try {
-      const [goalsData, stepsData] = await Promise.all([
+      const [goalsData, strategiesData, stepsData] = await Promise.all([
         db.goals.orderBy('order').toArray(),
+        db.strategies.orderBy('order').toArray(),
         db.actionSteps.orderBy('order').toArray(),
       ])
       setGoals(goalsData)
+      setStrategies(strategiesData)
       setSteps(stepsData)
 
       if (!selectedGoalId && goalsData.length > 0) {
@@ -41,7 +48,7 @@ export default function ActionCascadePage() {
     }
   }
 
-  // Шаги для выбранной цели
+   // Шаги для выбранной цели
   const goalSteps = steps.filter(s => s.goalId === selectedGoalId)
 
   // Корневые шаги (без родителя)
@@ -59,6 +66,59 @@ export default function ActionCascadePage() {
 
   // Выбранная цель
   const selectedGoal = goals.find(g => g.id === selectedGoalId) || null
+
+  // ===== ИМПОРТ ИЗ СТРАТЕГИИ =====
+  async function handleImportStrategy(_id: number, title: string) {
+    // Создаём корневой шаг из стратегической цели
+    if (!selectedGoalId) return
+
+    try {
+      const now = new Date().toISOString()
+      const siblings = goalSteps.filter(s => !s.parentId)
+
+      await db.actionSteps.add({
+        goalId: selectedGoalId,
+        parentId: undefined,
+        title: `🎯 ${title}`,
+        isCompleted: false,
+        order: siblings.length,
+        level: 0,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      await loadData()
+      setShowImport(false)
+    } catch (error) {
+      console.error('Ошибка импорта:', error)
+    }
+  }
+
+  // ===== ИМПОРТ ИЗ ЦЕЛЕЙ НА ГОД =====
+  async function handleImportGoal(_id: number, title: string) {
+    if (!selectedGoalId) return
+
+    try {
+      const now = new Date().toISOString()
+      const siblings = goalSteps.filter(s => !s.parentId)
+
+      await db.actionSteps.add({
+        goalId: selectedGoalId,
+        parentId: undefined,
+        title: `📋 ${title}`,
+        isCompleted: false,
+        order: siblings.length,
+        level: 0,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      await loadData()
+      setShowImport(false)
+    } catch (error) {
+      console.error('Ошибка импорта:', error)
+    }
+  }
 
   // Открыть форму для добавления
   function handleAdd(parentId?: number, level: number = 0) {
@@ -94,7 +154,6 @@ export default function ActionCascadePage() {
           updatedAt: now,
         })
       } else {
-        // Считаем порядок среди братьев
         const siblings = goalSteps.filter(s =>
           formParentId ? s.parentId === formParentId : !s.parentId
         )
@@ -139,7 +198,6 @@ export default function ActionCascadePage() {
     if (!confirmed) return
 
     try {
-      // Собираем все дочерние рекурсивно
       const toDelete: number[] = [id]
       function collectChildren(parentId: number) {
         const children = steps.filter(s => s.parentId === parentId)
@@ -150,7 +208,6 @@ export default function ActionCascadePage() {
       }
       collectChildren(id)
 
-      // Удаляем все
       await db.actionSteps.bulkDelete(toDelete)
       await loadData()
     } catch (error) {
@@ -220,6 +277,7 @@ export default function ActionCascadePage() {
                 onClick={() => {
                   setSelectedGoalId(goal.id!)
                   setShowForm(false)
+                  setShowImport(false)
                   setEditingStep(null)
                 }}
                 className={`
@@ -253,7 +311,7 @@ export default function ActionCascadePage() {
       {/* Контент для выбранной цели */}
       {selectedGoal && (
         <>
-          {/* Статистика + кнопка добавить */}
+          {/* Статистика + кнопки */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               {totalSteps > 0 && (
@@ -277,16 +335,108 @@ export default function ActionCascadePage() {
               )}
             </div>
 
-            <button
-              onClick={() => handleAdd(undefined, 0)}
-              className="px-4 py-2 bg-primary text-white rounded-lg
-                         hover:bg-primary-dark transition-colors cursor-pointer
-                         font-medium text-sm flex items-center gap-1"
-            >
-              <span>+</span>
-              <span>Добавить шаг</span>
-            </button>
+            <div className="flex gap-2">
+              {/* Кнопка импорта */}
+              <button
+                onClick={() => {
+                  setShowImport(!showImport)
+                  setShowForm(false)
+                }}
+                className={`px-3 py-2 rounded-lg transition-colors cursor-pointer
+                           font-medium text-sm flex items-center gap-1
+                           ${showImport
+                             ? 'bg-warning/20 text-warning'
+                             : 'bg-bg text-text-light hover:bg-border hover:text-text'
+                           }`}
+              >
+                <span>📥</span>
+                <span>Импорт</span>
+              </button>
+
+              {/* Кнопка добавить */}
+              <button
+                onClick={() => {
+                  handleAdd(undefined, 0)
+                  setShowImport(false)
+                }}
+                className="px-4 py-2 bg-primary text-white rounded-lg
+                           hover:bg-primary-dark transition-colors cursor-pointer
+                           font-medium text-sm flex items-center gap-1"
+              >
+                <span>+</span>
+                <span>Добавить шаг</span>
+              </button>
+            </div>
           </div>
+
+          {/* ===== ПАНЕЛЬ ИМПОРТА ===== */}
+          {showImport && (
+            <div className="bg-surface border-2 border-warning/20 rounded-xl p-4 mb-4">
+              <h3 className="font-semibold text-text mb-3 text-sm flex items-center gap-2">
+                📥 Импорт — добавить шаг из другого блока
+              </h3>
+
+              {/* Импорт из стратегии */}
+              {strategies.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-medium text-text-light mb-2">
+                    🎯 Из стратегии 5 лет:
+                  </p>
+                  <div className="grid gap-1.5">
+                    {strategies.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleImportStrategy(s.id!, s.title)}
+                        className="w-full text-left px-3 py-2 rounded-lg bg-bg
+                                   hover:bg-primary/10 hover:text-primary
+                                   transition-colors cursor-pointer text-sm
+                                   flex items-center justify-between"
+                      >
+                        <span>{s.title}</span>
+                        <span className="text-xs text-text-light">{s.sphere}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Импорт из целей на год */}
+              <div>
+                <p className="text-xs font-medium text-text-light mb-2">
+                  📋 Из целей на год:
+                </p>
+                <div className="grid gap-1.5">
+                  {goals
+                    .filter(g => g.id !== selectedGoalId)
+                    .map(g => (
+                      <button
+                        key={g.id}
+                        onClick={() => handleImportGoal(g.id!, g.title)}
+                        className="w-full text-left px-3 py-2 rounded-lg bg-bg
+                                   hover:bg-primary/10 hover:text-primary
+                                   transition-colors cursor-pointer text-sm
+                                   flex items-center justify-between"
+                      >
+                        <span>{g.title}</span>
+                        <span className="text-xs text-text-light">{g.sphere}</span>
+                      </button>
+                    ))}
+                  {goals.filter(g => g.id !== selectedGoalId).length === 0 && (
+                    <p className="text-xs text-text-light py-2">
+                      Нет других целей для импорта
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowImport(false)}
+                className="mt-3 text-xs text-text-light hover:text-text cursor-pointer"
+              >
+                ✕ Закрыть
+              </button>
+            </div>
+          )}
 
           {/* Форма (если открыта) */}
           {showForm && (
@@ -368,7 +518,7 @@ export default function ActionCascadePage() {
                 )
               })}
             </div>
-          ) : !showForm ? (
+          ) : !showForm && !showImport ? (
             <div className="text-center py-12">
               <p className="text-4xl mb-4">🔗</p>
               <h3 className="text-lg font-semibold text-text mb-2">
@@ -377,14 +527,24 @@ export default function ActionCascadePage() {
               <p className="text-text-light mb-6">
                 Разбейте цель «{selectedGoal.title}» на конкретные шаги
               </p>
-              <button
-                onClick={() => handleAdd(undefined, 0)}
-                className="px-6 py-3 bg-primary text-white rounded-lg
-                           hover:bg-primary-dark transition-colors cursor-pointer
-                           font-medium"
-              >
-                ➕ Добавить первый шаг
-              </button>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => handleAdd(undefined, 0)}
+                  className="px-6 py-3 bg-primary text-white rounded-lg
+                             hover:bg-primary-dark transition-colors cursor-pointer
+                             font-medium"
+                >
+                  ➕ Добавить шаг
+                </button>
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="px-6 py-3 bg-bg text-text-light rounded-lg
+                             hover:bg-border hover:text-text transition-colors
+                             cursor-pointer font-medium"
+                >
+                  📥 Импорт
+                </button>
+              </div>
             </div>
           ) : null}
         </>

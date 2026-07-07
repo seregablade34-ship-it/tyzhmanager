@@ -16,6 +16,11 @@ export interface Strategy {
 }
 
 // --- ЦЕЛИ НА ГОД ---
+export interface MonthProgress {
+  checked: boolean        // Отмечен ли месяц
+  comment: string         // Комментарий к месяцу
+}
+
 export interface Goal {
   id?: number
   strategyId?: number     // Связь со стратегией (необязательно)
@@ -25,6 +30,7 @@ export interface Goal {
   year: number            // Год
   status: 'active' | 'completed' | 'cancelled'  // Статус
   progress: number        // Прогресс 0-100
+  monthlyProgress?: MonthProgress[]  // 12 месяцев (трекер)
   createdAt: string
   updatedAt: string
   order: number

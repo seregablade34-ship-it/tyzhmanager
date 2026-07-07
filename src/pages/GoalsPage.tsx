@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { db } from '../db/database'
-import type { Goal, Strategy } from '../types'
+import type { Goal, Strategy, MonthProgress } from '../types'
 import GoalCard from '../components/GoalCard'
 import GoalForm from '../components/GoalForm'
 import ReflectionModal from '../components/ReflectionModal'
@@ -132,6 +132,20 @@ export default function GoalsPage() {
       await loadData()
     } catch (error) {
       console.error('Ошибка обновления прогресса:', error)
+    }
+  }
+
+  // Изменить трекер по месяцам
+  async function handleMonthlyChange(id: number, monthly: MonthProgress[]) {
+    try {
+      const now = new Date().toISOString()
+      await db.goals.update(id, {
+        monthlyProgress: monthly,
+        updatedAt: now,
+      })
+      await loadData()
+    } catch (error) {
+      console.error('Ошибка обновления месяцев:', error)
     }
   }
 
@@ -315,7 +329,7 @@ export default function GoalsPage() {
         <div className="grid gap-4">
           {sortedGoals.map(goal => (
             <GoalCard
-              key={goal.id}
+               key={goal.id}
               goal={goal}
               strategyTitle={getStrategyTitle(goal.strategyId)}
               onEdit={handleEdit}
@@ -323,6 +337,7 @@ export default function GoalsPage() {
               onProgressChange={handleProgressChange}
               onComplete={handleComplete}
               onFail={handleFail}
+              onMonthlyChange={handleMonthlyChange}
             />
           ))}
         </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { db } from '../db/database'
-import type { Goal, DescartesSquare, ThreePResult, CoachingSession, EisenhowerItem } from '../types'
+import type { Goal, Strategy, DescartesSquare, ThreePResult, CoachingSession, EisenhowerItem } from '../types'
 import DescartesSquareForm from '../components/DescartesSquareForm'
 import EisenhowerMatrix from '../components/EisenhowerMatrix'
 import ThreePForm from '../components/ThreePForm'
@@ -9,8 +9,12 @@ import CoachingWizard from '../components/CoachingWizard'
 // Экраны
 type Screen = 'hub' | 'descartes' | 'eisenhower' | 'threeP' | 'coaching'
 
+// Виртуальный ID: для стратегий используем offset чтобы не путать с целями
+const STRATEGY_OFFSET = 100000
+
 export default function EvaluationPage() {
   const [goals, setGoals] = useState<Goal[]>([])
+  const [strategies, setStrategies] = useState<Strategy[]>([])
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null)
   const [screen, setScreen] = useState<Screen>('hub')
   const [isLoading, setIsLoading] = useState(true)
@@ -27,20 +31,26 @@ export default function EvaluationPage() {
 
   async function loadData() {
     try {
-      const [goalsArr, descArr, eisArr, tpArr, coachArr] = await Promise.all([
+      const [goalsArr, strategiesArr, descArr, eisArr, tpArr, coachArr] = await Promise.all([
         db.goals.orderBy('order').toArray(),
+        db.strategies.orderBy('order').toArray(),
         db.descartesSquares.toArray(),
         db.eisenhowerItems.toArray(),
         db.threePResults.toArray(),
         db.coachingSessions.toArray(),
       ])
       setGoals(goalsArr)
+      setStrategies(strategiesArr)
       setDescartesData(descArr)
       setEisenhowerData(eisArr)
       setThreePData(tpArr)
       setCoachingData(coachArr)
-      if (goalsArr.length > 0 && !selectedGoalId) {
-        setSelectedGoalId(goalsArr[0].id!)
+      if ((goalsArr.length > 0 || strategiesArr.length > 0) && !selectedGoalId) {
+        if (goalsArr.length > 0) {
+          setSelectedGoalId(goalsArr[0].id!)
+        } else {
+          setSelectedGoalId(strategiesArr[0].id! + STRATEGY_OFFSET)
+        }
       }
     } catch (error) {
       console.error('Ошибка загрузки:', error)
@@ -49,7 +59,16 @@ export default function EvaluationPage() {
     }
   }
 
-  const selectedGoal = goals.find(g => g.id === selectedGoalId) || null
+  // Получить название выбранной цели/стратегии
+  function getSelectedTitle(): string {
+    if (!selectedGoalId) return ''
+    if (selectedGoalId >= STRATEGY_OFFSET) {
+      const s = strategies.find(s => s.id === selectedGoalId - STRATEGY_OFFSET)
+      return s?.title || ''
+    }
+    const g = goals.find(g => g.id === selectedGoalId)
+    return g?.title || ''
+  }
 
   // Проверяем, есть ли данные по инструментам для выбранной цели
   function hasDescartes(): boolean {
@@ -64,6 +83,9 @@ export default function EvaluationPage() {
   function hasCoaching(): boolean {
     return coachingData.some(d => d.goalId === selectedGoalId && d.isCompleted)
   }
+
+  // Сколько инструментов пройдено для выбранной цели
+  const toolsDone = [hasDescartes(), hasEisenhower(), hasThreeP(), hasCoaching()].filter(Boolean).length
 
   // Карточки инструментов
   const tools = [
@@ -109,8 +131,8 @@ export default function EvaluationPage() {
     )
   }
 
-  // Нет целей
-  if (goals.length === 0) {
+  // Нет целей и стратегий
+  if (goals.length === 0 && strategies.length === 0) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-text mb-4">⚖️ Оценка целей</h1>
@@ -120,19 +142,19 @@ export default function EvaluationPage() {
             Сначала создайте цель
           </h3>
           <p className="text-text-light">
-            Перейдите в «Цели на год» и добавьте хотя бы одну цель.
+            Перейдите в «Цели на год» или «Стратегия 5 лет» и добавьте хотя бы одну цель.
           </p>
         </div>
       </div>
     )
   }
 
-// Квадрат Декарта
-  if (screen === 'descartes' && selectedGoal) {
+  // Квадрат Декарта
+  if (screen === 'descartes' && selectedGoalId) {
     return (
       <DescartesSquareForm
-        goalId={selectedGoal.id!}
-        goalTitle={selectedGoal.title}
+        goalId={selectedGoalId}
+        goalTitle={getSelectedTitle()}
         onBack={() => { setScreen('hub'); loadData() }}
       />
     )
@@ -148,27 +170,27 @@ export default function EvaluationPage() {
   }
 
   // Метод 3П
-  if (screen === 'threeP' && selectedGoal) {
+  if (screen === 'threeP' && selectedGoalId) {
     return (
       <ThreePForm
-        goalId={selectedGoal.id!}
-        goalTitle={selectedGoal.title}
+        goalId={selectedGoalId}
+        goalTitle={getSelectedTitle()}
         onBack={() => { setScreen('hub'); loadData() }}
       />
     )
   }
 
   // Мини-самокоучинг
-  if (screen === 'coaching' && selectedGoal) {
+  if (screen === 'coaching' && selectedGoalId) {
     return (
       <CoachingWizard
-        goalId={selectedGoal.id!}
-        goalTitle={selectedGoal.title}
+        goalId={selectedGoalId}
+        goalTitle={getSelectedTitle()}
         onBack={() => { setScreen('hub'); loadData() }}
       />
     )
   }
-  
+
   // ХАБ — выбор инструмента
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -186,36 +208,97 @@ export default function EvaluationPage() {
         <label className="block text-sm font-medium text-text-light mb-2">
           Выберите цель для оценки:
         </label>
-        <div className="grid gap-2">
-          {goals.map(goal => {
-            const isSelected = selectedGoalId === goal.id
-            return (
-              <button
-                key={goal.id}
-                onClick={() => setSelectedGoalId(goal.id!)}
-                className={`
-                  w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
-                  flex items-center justify-between
-                  ${isSelected
-                    ? 'bg-primary/10 border-2 border-primary text-text'
-                    : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
-                  }
-                `}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{goal.title}</span>
-                  <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
-                    {goal.sphere}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+
+        {/* Цели на год */}
+        {goals.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs font-medium text-text-light mb-1.5">📋 Цели на год:</p>
+            <div className="grid gap-1.5">
+              {goals.map(goal => {
+                const isSelected = selectedGoalId === goal.id
+                return (
+                  <button
+                    key={goal.id}
+                    onClick={() => setSelectedGoalId(goal.id!)}
+                    className={`
+                      w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
+                      flex items-center justify-between
+                      ${isSelected
+                        ? 'bg-primary/10 border-2 border-primary text-text'
+                        : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{goal.title}</span>
+                      <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
+                        {goal.sphere}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Стратегические цели */}
+        {strategies.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-text-light mb-1.5">🎯 Стратегия 5 лет:</p>
+            <div className="grid gap-1.5">
+              {strategies.map(strategy => {
+                const virtualId = strategy.id! + STRATEGY_OFFSET
+                const isSelected = selectedGoalId === virtualId
+                return (
+                  <button
+                    key={virtualId}
+                    onClick={() => setSelectedGoalId(virtualId)}
+                    className={`
+                      w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
+                      flex items-center justify-between
+                      ${isSelected
+                        ? 'bg-primary/10 border-2 border-primary text-text'
+                        : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{strategy.title}</span>
+                      <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
+                        {strategy.sphere}
+                      </span>
+                      <span className="text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">
+                        🎯 стратегия
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Статус оценки */}
+      {selectedGoalId && toolsDone > 0 && (
+        <div className="bg-surface border border-border rounded-xl p-3 mb-4
+                        flex items-center justify-between">
+          <span className="text-sm text-text-light">
+            Прогресс оценки: <strong className="text-text">{toolsDone} из 4</strong> инструментов
+          </span>
+          <div className="w-24 h-2 bg-bg rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300
+                         ${toolsDone === 4 ? 'bg-success' : 'bg-primary'}`}
+              style={{ width: `${(toolsDone / 4) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* 4 инструмента */}
-      {selectedGoal && (
+      {selectedGoalId && (
         <div className="grid grid-cols-2 gap-4">
           {tools.map(tool => (
             <button

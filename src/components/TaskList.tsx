@@ -2,6 +2,12 @@ import { useState } from 'react'
 import type { TaskItem } from '../hooks/useDailyEntry'
 import type { TaskStatus, TaskPriority, TaskTag } from '../types'
 
+interface ImportGoal {
+  id: number
+  title: string
+  sphere: string
+}
+
 interface TaskListProps {
   tasks: TaskItem[]
   onAdd: (title: string) => void
@@ -12,6 +18,7 @@ interface TaskListProps {
   onAddSubtask: (taskId: number, title: string) => void
   onToggleSubtask: (taskId: number, subtaskId: string) => void
   onDeleteSubtask: (taskId: number, subtaskId: string) => void
+  importGoals?: ImportGoal[]
 }
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: string; color: string }> = {
@@ -40,10 +47,12 @@ const STATUS_ORDER: TaskStatus[] = ['not-started', 'planned', 'in-progress', 'do
 export default function TaskList({
   tasks, onAdd, onUpdateStatus, onUpdatePriority, onUpdateTag,
   onDelete, onAddSubtask, onToggleSubtask, onDeleteSubtask,
+  importGoals,
 }: TaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
+  const [showImport, setShowImport] = useState(false)
 
   function handleAdd() {
     const trimmed = newTaskTitle.trim()
@@ -69,6 +78,11 @@ export default function TaskList({
     setNewSubtaskTitle('')
   }
 
+  function handleImportGoal(goal: ImportGoal) {
+    onAdd(`📋 ${goal.title}`)
+    setShowImport(false)
+  }
+
   const doneCount = tasks.filter(t => t.status === 'done').length
   const totalCount = tasks.length
   const progressPercent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
@@ -78,11 +92,13 @@ export default function TaskList({
       {/* Заголовок */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-text">✅ Задачи на день</h2>
-        {totalCount > 0 && (
-          <span className="text-sm text-text-light">
-            {doneCount}/{totalCount} выполнено
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {totalCount > 0 && (
+            <span className="text-sm text-text-light">
+              {doneCount}/{totalCount} выполнено
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Добавление задачи */}
@@ -97,6 +113,20 @@ export default function TaskList({
                      placeholder-text-light/50 focus:outline-none focus:ring-2
                      focus:ring-primary/30 focus:border-primary transition-colors"
         />
+        {/* Кнопка импорта из целей */}
+        {importGoals && importGoals.length > 0 && (
+          <button
+            onClick={() => setShowImport(!showImport)}
+            className={`px-3 py-2 rounded-lg transition-colors cursor-pointer text-sm
+                       ${showImport
+                         ? 'bg-warning/20 text-warning'
+                         : 'bg-bg text-text-light hover:bg-border hover:text-text border border-border'
+                       }`}
+            title="Импорт из целей на год"
+          >
+            📥
+          </button>
+        )}
         <button
           onClick={handleAdd}
           className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark
@@ -105,6 +135,38 @@ export default function TaskList({
           +
         </button>
       </div>
+
+      {/* Панель импорта из целей */}
+      {showImport && importGoals && importGoals.length > 0 && (
+        <div className="bg-bg border border-warning/20 rounded-lg p-3 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-text-light">
+              📥 Создать задачу из цели на год:
+            </p>
+            <button
+              onClick={() => setShowImport(false)}
+              className="text-xs text-text-light hover:text-text cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="grid gap-1.5 max-h-40 overflow-y-auto">
+            {importGoals.map(goal => (
+              <button
+                key={goal.id}
+                onClick={() => handleImportGoal(goal)}
+                className="w-full text-left px-3 py-2 rounded-lg bg-surface
+                           hover:bg-primary/10 hover:text-primary
+                           transition-colors cursor-pointer text-sm
+                           flex items-center justify-between"
+              >
+                <span>{goal.title}</span>
+                <span className="text-xs text-text-light">{goal.sphere}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Пустое состояние */}
       {tasks.length === 0 ? (
