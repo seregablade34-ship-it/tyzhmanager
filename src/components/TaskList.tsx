@@ -1,15 +1,49 @@
 import { useState } from 'react'
 import type { TaskItem } from '../hooks/useDailyEntry'
+import type { TaskStatus, TaskPriority, TaskTag } from '../types'
 
 interface TaskListProps {
   tasks: TaskItem[]
   onAdd: (title: string) => void
-  onToggle: (taskId: number) => void
+  onUpdateStatus: (taskId: number, status: TaskStatus) => void
+  onUpdatePriority: (taskId: number, priority: TaskPriority) => void
+  onUpdateTag: (taskId: number, tag: TaskTag | undefined) => void
   onDelete: (taskId: number) => void
+  onAddSubtask: (taskId: number, title: string) => void
+  onToggleSubtask: (taskId: number, subtaskId: string) => void
+  onDeleteSubtask: (taskId: number, subtaskId: string) => void
 }
 
-export default function TaskList({ tasks, onAdd, onToggle, onDelete }: TaskListProps) {
+const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: string; color: string }> = {
+  'not-started': { label: 'Не начато', icon: '⬜', color: 'text-text-light' },
+  'planned':     { label: 'Запланировано', icon: '📋', color: 'text-blue-500' },
+  'in-progress': { label: 'В процессе', icon: '🔄', color: 'text-warning' },
+  'done':        { label: 'Готово', icon: '✅', color: 'text-success' },
+}
+
+const PRIORITY_CONFIG: Record<TaskPriority, { label: string; icon: string; color: string }> = {
+  'high':   { label: 'Высокий', icon: '🔴', color: 'border-l-danger' },
+  'medium': { label: 'Средний', icon: '🟡', color: 'border-l-warning' },
+  'low':    { label: 'Низкий', icon: '🟢', color: 'border-l-success' },
+}
+
+const TAG_CONFIG: Record<TaskTag, { label: string; icon: string; bg: string }> = {
+  'focus':    { label: 'Фокус', icon: '🎯', bg: 'bg-red-50 text-red-700' },
+  'goal':     { label: 'Цель', icon: '⭐', bg: 'bg-amber-50 text-amber-700' },
+  'control':  { label: 'Контроль', icon: '📊', bg: 'bg-blue-50 text-blue-700' },
+  'routine':  { label: 'Рутина', icon: '🔁', bg: 'bg-gray-50 text-gray-700' },
+  'personal': { label: 'Личное', icon: '💜', bg: 'bg-purple-50 text-purple-700' },
+}
+
+const STATUS_ORDER: TaskStatus[] = ['not-started', 'planned', 'in-progress', 'done']
+
+export default function TaskList({
+  tasks, onAdd, onUpdateStatus, onUpdatePriority, onUpdateTag,
+  onDelete, onAddSubtask, onToggleSubtask, onDeleteSubtask,
+}: TaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [expandedTask, setExpandedTask] = useState<number | null>(null)
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
 
   function handleAdd() {
     const trimmed = newTaskTitle.trim()
@@ -19,26 +53,39 @@ export default function TaskList({ tasks, onAdd, onToggle, onDelete }: TaskListP
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
-      handleAdd()
-    }
+    if (e.key === 'Enter') handleAdd()
   }
 
-  const completedCount = tasks.filter(t => t.isCompleted).length
+  function cycleStatus(taskId: number, currentStatus: TaskStatus) {
+    const idx = STATUS_ORDER.indexOf(currentStatus)
+    const next = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length]
+    onUpdateStatus(taskId, next)
+  }
+
+  function handleAddSubtask(taskId: number) {
+    const trimmed = newSubtaskTitle.trim()
+    if (!trimmed) return
+    onAddSubtask(taskId, trimmed)
+    setNewSubtaskTitle('')
+  }
+
+  const doneCount = tasks.filter(t => t.status === 'done').length
   const totalCount = tasks.length
-  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+  const progressPercent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
 
   return (
     <div className="bg-surface border border-border rounded-xl p-4">
+      {/* Заголовок */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-text">✅ Задачи на день</h2>
         {totalCount > 0 && (
           <span className="text-sm text-text-light">
-            {completedCount}/{totalCount} выполнено
+            {doneCount}/{totalCount} выполнено
           </span>
         )}
       </div>
 
+      {/* Добавление задачи */}
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -46,49 +93,214 @@ export default function TaskList({ tasks, onAdd, onToggle, onDelete }: TaskListP
           onChange={(e) => setNewTaskTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Добавить задачу..."
-          className="flex-1 px-3 py-2 rounded-lg border border-border bg-bg text-text placeholder-text-light/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          className="flex-1 px-3 py-2 rounded-lg border border-border bg-bg text-text
+                     placeholder-text-light/50 focus:outline-none focus:ring-2
+                     focus:ring-primary/30 focus:border-primary transition-colors"
         />
         <button
           onClick={handleAdd}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-bold cursor-pointer"
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark
+                     transition-colors font-bold cursor-pointer"
         >
           +
         </button>
       </div>
 
+      {/* Пустое состояние */}
       {tasks.length === 0 ? (
         <p className="text-center text-text-light py-4">
           Пока нет задач. Добавьте первую! ☝️
         </p>
       ) : (
         <div className="space-y-2">
-          {tasks.map(task => (
-            <div
-              key={task.id}
-              className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${task.isCompleted ? 'bg-success/5' : 'hover:bg-bg'}`}
-            >
-              <button
-                onClick={() => onToggle(task.id)}
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 ${task.isCompleted ? 'bg-success border-success text-white' : 'border-border hover:border-primary'}`}
-              >
-                {task.isCompleted && <span className="text-xs">✓</span>}
-              </button>
+          {tasks.map(task => {
+            const subtasks = task.subtasks || []
+            const statusCfg = STATUS_CONFIG[task.status || 'not-started']
+            const priorityCfg = PRIORITY_CONFIG[task.priority || 'medium']
+            const tagCfg = task.tag ? TAG_CONFIG[task.tag] : null
+            const isExpanded = expandedTask === task.id
+            const completedSubs = subtasks.filter(s => s.isCompleted).length
 
-              <span className={`flex-1 transition-colors ${task.isCompleted ? 'line-through text-text-light' : 'text-text'}`}>
-                {task.title}
-              </span>
+            return (
+              <div key={task.id} className={`border-l-4 ${priorityCfg.color} rounded-lg border border-border overflow-hidden`}>
+                {/* Основная строка задачи */}
+                <div className={`flex items-center gap-2 p-3 ${task.status === 'done' ? 'bg-success/5' : 'hover:bg-bg'} transition-colors`}>
 
-              <button
-                onClick={() => onDelete(task.id)}
-                className="text-text-light hover:text-danger transition-colors cursor-pointer text-sm"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+                  {/* Кнопка статуса */}
+                  <button
+                    onClick={() => cycleStatus(task.id, task.status || 'not-started')}
+                    className="cursor-pointer text-lg flex-shrink-0"
+                    title={`${statusCfg.label} → клик для смены`}
+                  >
+                    {statusCfg.icon}
+                  </button>
+
+                  {/* Название */}
+                  <span className={`flex-1 ${task.status === 'done' ? 'line-through text-text-light' : 'text-text'}`}>
+                    {task.title}
+                  </span>
+
+                  {/* Тег */}
+                  {tagCfg && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${tagCfg.bg}`}>
+                      {tagCfg.icon} {tagCfg.label}
+                    </span>
+                  )}
+
+                  {/* Подзадачи индикатор */}
+                  {subtasks.length > 0 && (
+                    <span className="text-xs text-text-light">
+                      {completedSubs}/{subtasks.length}
+                    </span>
+                  )}
+
+                  {/* Раскрыть */}
+                  <button
+                    onClick={() => setExpandedTask(isExpanded ? null : task.id)}
+                    className="text-text-light hover:text-text cursor-pointer text-sm"
+                  >
+                    {isExpanded ? '▲' : '▼'}
+                  </button>
+
+                  {/* Удалить */}
+                  <button
+                    onClick={() => onDelete(task.id)}
+                    className="text-text-light hover:text-danger transition-colors cursor-pointer text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Раскрытая панель */}
+                {isExpanded && (
+                  <div className="px-3 pb-3 pt-1 bg-bg/50 border-t border-border">
+                    {/* Управление статусом */}
+                    <div className="mb-3">
+                      <p className="text-xs text-text-light mb-1">Статус:</p>
+                      <div className="flex gap-1 flex-wrap">
+                        {STATUS_ORDER.map(s => (
+                          <button
+                            key={s}
+                            onClick={() => onUpdateStatus(task.id, s)}
+                            className={`text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors ${
+                              task.status === s
+                                ? 'bg-primary text-white'
+                                : 'bg-bg border border-border hover:bg-surface text-text-light'
+                            }`}
+                          >
+                            {STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Управление приоритетом */}
+                    <div className="mb-3">
+                      <p className="text-xs text-text-light mb-1">Приоритет:</p>
+                      <div className="flex gap-1">
+                        {(['high', 'medium', 'low'] as TaskPriority[]).map(p => (
+                          <button
+                            key={p}
+                            onClick={() => onUpdatePriority(task.id, p)}
+                            className={`text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors ${
+                              task.priority === p
+                                ? 'bg-primary text-white'
+                                : 'bg-bg border border-border hover:bg-surface text-text-light'
+                            }`}
+                          >
+                            {PRIORITY_CONFIG[p].icon} {PRIORITY_CONFIG[p].label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Управление тегом */}
+                    <div className="mb-3">
+                      <p className="text-xs text-text-light mb-1">Тег:</p>
+                      <div className="flex gap-1 flex-wrap">
+                        <button
+                          onClick={() => onUpdateTag(task.id, undefined)}
+                          className={`text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors ${
+                            !task.tag
+                              ? 'bg-primary text-white'
+                              : 'bg-bg border border-border hover:bg-surface text-text-light'
+                          }`}
+                        >
+                          Без тега
+                        </button>
+                        {(Object.keys(TAG_CONFIG) as TaskTag[]).map(t => (
+                          <button
+                            key={t}
+                            onClick={() => onUpdateTag(task.id, t)}
+                            className={`text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors ${
+                              task.tag === t
+                                ? 'bg-primary text-white'
+                                : 'bg-bg border border-border hover:bg-surface text-text-light'
+                            }`}
+                          >
+                            {TAG_CONFIG[t].icon} {TAG_CONFIG[t].label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Подзадачи */}
+                    <div>
+                      <p className="text-xs text-text-light mb-1">Подзадачи:</p>
+                      {subtasks.length > 0 && (
+                        <div className="space-y-1 mb-2">
+                          {subtasks.map(sub => (
+                            <div key={sub.id} className="flex items-center gap-2">
+                              <button
+                                onClick={() => onToggleSubtask(task.id, sub.id)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer flex-shrink-0 ${
+                                  sub.isCompleted
+                                    ? 'bg-success border-success text-white'
+                                    : 'border-border hover:border-primary'
+                                }`}
+                              >
+                                {sub.isCompleted && <span className="text-[10px]">✓</span>}
+                              </button>
+                              <span className={`flex-1 text-sm ${sub.isCompleted ? 'line-through text-text-light' : 'text-text'}`}>
+                                {sub.title}
+                              </span>
+                              <button
+                                onClick={() => onDeleteSubtask(task.id, sub.id)}
+                                className="text-text-light hover:text-danger cursor-pointer text-xs"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={expandedTask === task.id ? newSubtaskTitle : ''}
+                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddSubtask(task.id) }}
+                          placeholder="Добавить подзадачу..."
+                          className="flex-1 px-2 py-1 rounded border border-border bg-surface text-sm text-text
+                                     placeholder-text-light/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                        <button
+                          onClick={() => handleAddSubtask(task.id)}
+                          className="px-2 py-1 bg-primary text-white rounded text-xs cursor-pointer hover:bg-primary-dark"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
+      {/* Прогресс-бар */}
       {totalCount > 0 && (
         <div className="mt-4">
           <div className="w-full bg-bg rounded-full h-2">

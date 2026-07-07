@@ -75,6 +75,36 @@ class TyzhManagerDB extends Dexie {
       threePResults:    '++id, goalId',
       coachingSessions: '++id, goalId, isCompleted',
     })
+
+    // Версия 3 — обновляем задачи: status вместо isCompleted, + tag, actionStepId
+    this.version(3).stores({
+      strategies:       '++id, sphere, deadline, order',
+      goals:            '++id, strategyId, sphere, year, status, order',
+      ppSmarts:         '++id, goalId',
+      actionSteps:      '++id, goalId, parentId, isCompleted, order',
+      dailyEntries:     '++id, &date',
+      tasks:            '++id, dailyEntryId, goalId, actionStepId, date, status, priority, tag, order',
+      goalEvaluations:  '++id, goalId, date',
+      achievements:     '++id, type, isUnlocked',
+      combos:           '++id, type',
+      userSettings:     '++id',
+      descartesSquares: '++id, goalId',
+      eisenhowerItems:  '++id, goalId, quadrant',
+      threePResults:    '++id, goalId',
+      coachingSessions: '++id, goalId, isCompleted',
+    }).upgrade(tx => {
+      // Миграция: конвертируем старые задачи (isCompleted → status)
+      return tx.table('tasks').toCollection().modify(task => {
+        // Если у задачи старый формат — конвертируем
+        if (task.isCompleted !== undefined && task.status === undefined) {
+          task.status = task.isCompleted ? 'done' : 'not-started'
+        }
+        // Устанавливаем значения по умолчанию для новых полей
+        if (!task.status) task.status = 'not-started'
+        if (!task.priority) task.priority = 'medium'
+        if (!task.subtasks) task.subtasks = []
+      })
+    })
   }
 }
 

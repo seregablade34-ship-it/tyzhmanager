@@ -79,14 +79,27 @@ export interface DailyEntry {
 }
 
 // --- ЗАДАЧИ (ежедневные) ---
+export type TaskStatus = 'not-started' | 'planned' | 'in-progress' | 'done'
+export type TaskPriority = 'high' | 'medium' | 'low'
+export type TaskTag = 'focus' | 'goal' | 'control' | 'routine' | 'personal'
+
+export interface SubTask {
+  id: string              // Уникальный ID (uuid-подобный)
+  title: string           // Текст подзадачи
+  isCompleted: boolean    // Выполнена?
+}
+
 export interface Task {
   id?: number
   dailyEntryId?: number   // Связь с днём
   goalId?: number         // Связь с целью (необязательно)
+  actionStepId?: number   // Связь с шагом каскада (необязательно)
   date: string            // Дата
   title: string           // Текст задачи
-  isCompleted: boolean    // Выполнена?
-  priority: 'high' | 'medium' | 'low'  // Приоритет
+  status: TaskStatus      // 4 статуса задачи
+  priority: TaskPriority  // Приоритет
+  tag?: TaskTag           // Тег (необязательно)
+  subtasks: SubTask[]     // Подзадачи (декомпозиция)
   order: number           // Порядок
   createdAt: string
   updatedAt: string

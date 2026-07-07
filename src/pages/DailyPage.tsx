@@ -29,12 +29,14 @@ export default function DailyPage() {
     updateLesson,
     updateTomorrow,
     addTask,
-    toggleTask,
+    updateTaskStatus,
+    updateTaskPriority,
+    updateTaskTag,
     deleteTask,
+    addSubtask,
+    toggleSubtask,
+    deleteSubtask,
   } = useDailyEntry(selectedDate)
-
-  // Цитата дня
-  const quote = getDailyQuote()
 
   function goToPrevDay() {
     setSelectedDate(prev => getPrevDay(prev))
@@ -62,11 +64,13 @@ export default function DailyPage() {
     )
   }
 
+  const quote = getDailyQuote()
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
 
       {/* === НАВИГАЦИЯ ПО ДАТАМ === */}
-      <div className="bg-surface border border-border rounded-xl p-4 mb-4">
+      <div className="bg-surface border border-border rounded-xl p-4 mb-6">
         <div className="flex items-center justify-between">
           <button
             onClick={goToPrevDay}
@@ -110,13 +114,17 @@ export default function DailyPage() {
       </div>
 
       {/* === ЦИТАТА ДНЯ === */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl px-5 py-3 mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-lg">💬</span>
-          <p className="text-sm text-text italic leading-relaxed flex-1">
-            «{quote.text}»
-            <span className="not-italic text-text-light ml-2">— {quote.author}</span>
-          </p>
+      <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-xl p-4 mb-4">
+        <div className="flex items-start gap-3">
+          <span className="text-xl">💬</span>
+          <div>
+            <p className="text-sm text-text italic leading-relaxed">
+              «{quote.text}»
+            </p>
+            <p className="text-xs text-text-light mt-1 text-right">
+              — {quote.author}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -142,8 +150,13 @@ export default function DailyPage() {
         <TaskList
           tasks={tasks}
           onAdd={addTask}
-          onToggle={toggleTask}
+          onUpdateStatus={updateTaskStatus}
+          onUpdatePriority={updateTaskPriority}
+          onUpdateTag={updateTaskTag}
           onDelete={deleteTask}
+          onAddSubtask={addSubtask}
+          onToggleSubtask={toggleSubtask}
+          onDeleteSubtask={deleteSubtask}
         />
       </div>
 

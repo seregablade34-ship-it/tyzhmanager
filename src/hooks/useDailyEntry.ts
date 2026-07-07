@@ -1,12 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { db } from '../db/database'
-import type { DailyEntry, Task } from '../types'
+import type { DailyEntry, Task, TaskStatus, TaskPriority, TaskTag } from '../types'
 
-// Тип для задач в UI
+// Подзадача для UI
+export interface SubTaskItem {
+  id: string
+  title: string
+  isCompleted: boolean
+}
+
+// Задача для UI
 export interface TaskItem {
   id: number
   title: string
-  isCompleted: boolean
+  status: TaskStatus
+  priority: TaskPriority
+  tag?: TaskTag
+  subtasks: SubTaskItem[]
 }
 
 // Пустая запись для нового дня
@@ -27,12 +37,15 @@ function createEmptyEntry(date: string): DailyEntry {
 }
 
 // Конвертация задач из БД в UI формат
-function dbTasksToUI(tasks: Task[]): TaskItem[] {
-  return tasks.map(t => ({
+function dbTaskToUI(t: Task): TaskItem {
+  return {
     id: t.id!,
     title: t.title,
-    isCompleted: t.isCompleted,
-  }))
+    status: t.status || 'not-started',
+    priority: t.priority || 'medium',
+    tag: t.tag,
+    subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
+  }
 }
 
 export function useDailyEntry(selectedDate: string) {
@@ -66,7 +79,7 @@ export function useDailyEntry(selectedDate: string) {
           .toArray()
 
         if (cancelled) return
-        setTasks(dbTasksToUI(dayTasks))
+        setTasks(dayTasks.map(dbTaskToUI))
       } catch (error) {
         console.error('Ошибка загрузки данных:', error)
         if (!cancelled) {
@@ -95,8 +108,6 @@ export function useDailyEntry(selectedDate: string) {
           date: selectedDate,
           updatedAt: new Date().toISOString(),
         }
-
-        // put = создать или полностью заменить (без проблем с массивами)
         await db.dailyEntries.put(toSave)
       } catch (error) {
         console.error('Ошибка сохранения записи:', error)
@@ -136,52 +147,165 @@ export function useDailyEntry(selectedDate: string) {
   }, [])
 
   // === ФУНКЦИИ для задач ===
+
+  // Добавить задачу
   const addTask = useCallback(async (title: string) => {
     try {
       const now = new Date().toISOString()
       const newTask: Task = {
         title,
         date: selectedDate,
-        isCompleted: false,
+        status: 'not-started',
         priority: 'medium',
+        subtasks: [],
         order: tasks.length,
         createdAt: now,
         updatedAt: now,
       }
       const id = await db.tasks.add(newTask)
-      setTasks(prev => [...prev, { id: id as number, title, isCompleted: false }])
+      setTasks(prev => [...prev, {
+        id: id as number,
+        title,
+        status: 'not-started',
+        priority: 'medium',
+        subtasks: [],
+      }])
     } catch (error) {
       console.error('Ошибка добавления задачи:', error)
     }
   }, [selectedDate, tasks.length])
 
-  const toggleTask = useCallback(async (taskId: number) => {
+  // Сменить статус
+  const updateTaskStatus = useCallback(async (taskId: number, status: TaskStatus) => {
     try {
-      const task = await db.tasks.get(taskId)
-      if (!task) return
-
-      const newCompleted = !task.isCompleted
       await db.tasks.update(taskId, {
-        isCompleted: newCompleted,
+        status,
         updatedAt: new Date().toISOString(),
       })
-
       setTasks(prev =>
-        prev.map(t =>
-          t.id === taskId ? { ...t, isCompleted: newCompleted } : t
-        )
+        prev.map(t => t.id === taskId ? { ...t, status } : t)
       )
     } catch (error) {
-      console.error('Ошибка переключения задачи:', error)
+      console.error('Ошибка смены статуса:', error)
     }
   }, [])
 
+  // Сменить приоритет
+  const updateTaskPriority = useCallback(async (taskId: number, priority: TaskPriority) => {
+    try {
+      await db.tasks.update(taskId, {
+        priority,
+        updatedAt: new Date().toISOString(),
+      })
+      setTasks(prev =>
+        prev.map(t => t.id === taskId ? { ...t, priority } : t)
+      )
+    } catch (error) {
+      console.error('Ошибка смены приоритета:', error)
+    }
+  }, [])
+
+  // Сменить тег
+  const updateTaskTag = useCallback(async (taskId: number, tag: TaskTag | undefined) => {
+    try {
+      await db.tasks.update(taskId, {
+        tag,
+        updatedAt: new Date().toISOString(),
+      })
+      setTasks(prev =>
+        prev.map(t => t.id === taskId ? { ...t, tag } : t)
+      )
+    } catch (error) {
+      console.error('Ошибка смены тега:', error)
+    }
+  }, [])
+
+  // Удалить задачу
   const deleteTask = useCallback(async (taskId: number) => {
     try {
       await db.tasks.delete(taskId)
       setTasks(prev => prev.filter(t => t.id !== taskId))
     } catch (error) {
       console.error('Ошибка удаления задачи:', error)
+    }
+  }, [])
+
+  // Добавить подзадачу
+  const addSubtask = useCallback(async (taskId: number, title: string) => {
+    try {
+      const task = await db.tasks.get(taskId)
+      if (!task) return
+
+      const newSubtask: SubTaskItem = {
+        id: crypto.randomUUID(),
+        title,
+        isCompleted: false,
+      }
+
+      const updatedSubtasks = [...(task.subtasks || []), newSubtask]
+      await db.tasks.update(taskId, {
+        subtasks: updatedSubtasks,
+        updatedAt: new Date().toISOString(),
+      })
+
+      setTasks(prev =>
+        prev.map(t => t.id === taskId
+          ? { ...t, subtasks: [...(t.subtasks || []), newSubtask] }
+          : t
+        )
+      )
+    } catch (error) {
+      console.error('Ошибка добавления подзадачи:', error)
+    }
+  }, [])
+
+  // Переключить подзадачу
+  const toggleSubtask = useCallback(async (taskId: number, subtaskId: string) => {
+    try {
+      const task = await db.tasks.get(taskId)
+      if (!task) return
+
+      const updatedSubtasks = (task.subtasks || []).map(s =>
+        s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s
+      )
+
+      await db.tasks.update(taskId, {
+        subtasks: updatedSubtasks,
+        updatedAt: new Date().toISOString(),
+      })
+
+      setTasks(prev =>
+        prev.map(t => t.id === taskId
+          ? { ...t, subtasks: updatedSubtasks }
+          : t
+        )
+      )
+    } catch (error) {
+      console.error('Ошибка переключения подзадачи:', error)
+    }
+  }, [])
+
+  // Удалить подзадачу
+  const deleteSubtask = useCallback(async (taskId: number, subtaskId: string) => {
+    try {
+      const task = await db.tasks.get(taskId)
+      if (!task) return
+
+      const updatedSubtasks = (task.subtasks || []).filter(s => s.id !== subtaskId)
+
+      await db.tasks.update(taskId, {
+        subtasks: updatedSubtasks,
+        updatedAt: new Date().toISOString(),
+      })
+
+      setTasks(prev =>
+        prev.map(t => t.id === taskId
+          ? { ...t, subtasks: updatedSubtasks }
+          : t
+        )
+      )
+    } catch (error) {
+      console.error('Ошибка удаления подзадачи:', error)
     }
   }, [])
 
@@ -197,7 +321,12 @@ export function useDailyEntry(selectedDate: string) {
     updateLesson,
     updateTomorrow,
     addTask,
-    toggleTask,
+    updateTaskStatus,
+    updateTaskPriority,
+    updateTaskTag,
     deleteTask,
+    addSubtask,
+    toggleSubtask,
+    deleteSubtask,
   }
 }

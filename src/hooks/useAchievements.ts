@@ -235,7 +235,7 @@ export function useAchievements() {
 
       // СПЕЦИАЛЬНЫЕ
       if (strategies.length >= 1) await tryUnlock('first_strategy')
-      const completedTasks = tasks.filter(t => t.isCompleted)
+      const completedTasks = tasks.filter(t => t.status === 'done')
       if (completedTasks.length >= 10) await tryUnlock('tasks_10')
       if (completedTasks.length >= 50) await tryUnlock('tasks_50')
       if (completedTasks.length >= 100) await tryUnlock('tasks_100')
