@@ -19,6 +19,7 @@ import type {
   EisenhowerItem,
   ThreePResult,
   CoachingSession,
+  GoalReflection,
 } from '../types'
 
 // Класс нашей базы данных
@@ -34,14 +35,16 @@ class TyzhManagerDB extends Dexie {
   achievements!: Table<Achievement>
   combos!: Table<Combo>
   userSettings!: Table<UserSettings>
-  // Новые таблицы — Оценка целей
+  // Оценка целей
   descartesSquares!: Table<DescartesSquare>
   eisenhowerItems!: Table<EisenhowerItem>
   threePResults!: Table<ThreePResult>
   coachingSessions!: Table<CoachingSession>
+  // Рефлексия
+  goalReflections!: Table<GoalReflection>
 
   constructor() {
-    super('tyzhmanager-db') // Имя базы данных в браузере
+    super('tyzhmanager-db')
 
     // Версия 1 — начальная структура
     this.version(1).stores({
@@ -57,7 +60,7 @@ class TyzhManagerDB extends Dexie {
       userSettings:   '++id',
     })
 
-    // Версия 2 — добавляем таблицы оценки целей
+    // Версия 2 — таблицы оценки целей
     this.version(2).stores({
       strategies:       '++id, sphere, deadline, order',
       goals:            '++id, strategyId, sphere, year, status, order',
@@ -69,14 +72,13 @@ class TyzhManagerDB extends Dexie {
       achievements:     '++id, type, isUnlocked',
       combos:           '++id, type',
       userSettings:     '++id',
-      // Новые таблицы
       descartesSquares: '++id, goalId',
       eisenhowerItems:  '++id, goalId, quadrant',
       threePResults:    '++id, goalId',
       coachingSessions: '++id, goalId, isCompleted',
     })
 
-    // Версия 3 — обновляем задачи: status вместо isCompleted, + tag, actionStepId
+    // Версия 3 — задачи PRO: status, tag, actionStepId
     this.version(3).stores({
       strategies:       '++id, sphere, deadline, order',
       goals:            '++id, strategyId, sphere, year, status, order',
@@ -93,17 +95,34 @@ class TyzhManagerDB extends Dexie {
       threePResults:    '++id, goalId',
       coachingSessions: '++id, goalId, isCompleted',
     }).upgrade(tx => {
-      // Миграция: конвертируем старые задачи (isCompleted → status)
       return tx.table('tasks').toCollection().modify(task => {
-        // Если у задачи старый формат — конвертируем
         if (task.isCompleted !== undefined && task.status === undefined) {
           task.status = task.isCompleted ? 'done' : 'not-started'
         }
-        // Устанавливаем значения по умолчанию для новых полей
         if (!task.status) task.status = 'not-started'
         if (!task.priority) task.priority = 'medium'
         if (!task.subtasks) task.subtasks = []
       })
+    })
+
+    // Версия 4 — рефлексия при завершении целей
+    this.version(4).stores({
+      strategies:       '++id, sphere, deadline, order',
+      goals:            '++id, strategyId, sphere, year, status, order',
+      ppSmarts:         '++id, goalId',
+      actionSteps:      '++id, goalId, parentId, isCompleted, order',
+      dailyEntries:     '++id, &date',
+      tasks:            '++id, dailyEntryId, goalId, actionStepId, date, status, priority, tag, order',
+      goalEvaluations:  '++id, goalId, date',
+      achievements:     '++id, type, isUnlocked',
+      combos:           '++id, type',
+      userSettings:     '++id',
+      descartesSquares: '++id, goalId',
+      eisenhowerItems:  '++id, goalId, quadrant',
+      threePResults:    '++id, goalId',
+      coachingSessions: '++id, goalId, isCompleted',
+      // Новая таблица
+      goalReflections:  '++id, goalId, strategyId, type',
     })
   }
 }

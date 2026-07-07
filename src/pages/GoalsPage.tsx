@@ -3,6 +3,8 @@ import { db } from '../db/database'
 import type { Goal, Strategy } from '../types'
 import GoalCard from '../components/GoalCard'
 import GoalForm from '../components/GoalForm'
+import ReflectionModal from '../components/ReflectionModal'
+import { fireGoalConfetti } from '../hooks/useConfetti'
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([])
@@ -11,6 +13,12 @@ export default function GoalsPage() {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [filterYear, setFilterYear] = useState(new Date().getFullYear())
+
+  // Рефлексия
+  const [reflectionGoal, setReflectionGoal] = useState<Goal | null>(null)
+  const [reflectionType, setReflectionType] = useState<'completed' | 'failed'>('completed')
+
+  // Конфетти
 
   // Загрузка из БД
   useEffect(() => {
@@ -35,9 +43,18 @@ export default function GoalsPage() {
   // Фильтруем по году
   const filteredGoals = goals.filter(g => g.year === filterYear)
 
+  // Сортировка: активные сверху, потом выполненные, потом отменённые
+  const sortedGoals = [...filteredGoals].sort((a, b) => {
+    const order = { active: 0, completed: 1, cancelled: 2 }
+    const diff = order[a.status] - order[b.status]
+    if (diff !== 0) return diff
+    return a.order - b.order
+  })
+
   // Статистика
   const activeCount = filteredGoals.filter(g => g.status === 'active').length
   const completedCount = filteredGoals.filter(g => g.status === 'completed').length
+  const cancelledCount = filteredGoals.filter(g => g.status === 'cancelled').length
   const avgProgress = filteredGoals.length > 0
     ? Math.round(filteredGoals.reduce((sum, g) => sum + g.progress, 0) / filteredGoals.length)
     : 0
@@ -96,6 +113,8 @@ export default function GoalsPage() {
 
     try {
       await db.goals.delete(id)
+      // Удаляем связанную рефлексию
+      await db.goalReflections.where('goalId').equals(id).delete()
       await loadData()
     } catch (error) {
       console.error('Ошибка удаления цели:', error)
@@ -106,23 +125,63 @@ export default function GoalsPage() {
   async function handleProgressChange(id: number, progress: number) {
     try {
       const now = new Date().toISOString()
-      const updates: Partial<Goal> = {
+      await db.goals.update(id, {
         progress,
         updatedAt: now,
-      }
-
-      // Автоматически менять статус при 100%
-      if (progress === 100) {
-        updates.status = 'completed'
-      } else {
-        updates.status = 'active'
-      }
-
-      await db.goals.update(id, updates)
+      })
       await loadData()
     } catch (error) {
       console.error('Ошибка обновления прогресса:', error)
     }
+  }
+
+  // ===== ВЫПОЛНЕНО — открыть рефлексию =====
+  function handleComplete(goal: Goal) {
+    setReflectionGoal(goal)
+    setReflectionType('completed')
+  }
+
+  // ===== НЕ ВЫПОЛНЕНО — открыть рефлексию =====
+  function handleFail(goal: Goal) {
+    setReflectionGoal(goal)
+    setReflectionType('failed')
+  }
+
+  // ===== Сохранение рефлексии =====
+  async function handleReflectionSave() {
+    if (!reflectionGoal) return
+
+    try {
+      const now = new Date().toISOString()
+
+      if (reflectionType === 'completed') {
+        // Ставим 100% и статус completed
+        await db.goals.update(reflectionGoal.id!, {
+          status: 'completed',
+          progress: 100,
+          updatedAt: now,
+        })
+        // 🎊 Конфетти!
+        fireGoalConfetti()
+      } else {
+        // Ставим статус cancelled
+        await db.goals.update(reflectionGoal.id!, {
+          status: 'cancelled',
+          updatedAt: now,
+        })
+      }
+
+      await loadData()
+    } catch (error) {
+      console.error('Ошибка обновления статуса цели:', error)
+    } finally {
+      setReflectionGoal(null)
+    }
+  }
+
+  // Отмена рефлексии
+  function handleReflectionCancel() {
+    setReflectionGoal(null)
   }
 
   // Отмена формы
@@ -202,7 +261,7 @@ export default function GoalsPage() {
 
       {/* Мини-статистика */}
       {filteredGoals.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-4 gap-3 mb-6">
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-primary">{activeCount}</p>
             <p className="text-xs text-text-light">В работе</p>
@@ -210,6 +269,10 @@ export default function GoalsPage() {
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-success">{completedCount}</p>
             <p className="text-xs text-text-light">Достигнуто</p>
+          </div>
+          <div className="bg-surface border border-border rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-danger">{cancelledCount}</p>
+            <p className="text-xs text-text-light">Не выполнено</p>
           </div>
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-warning">{avgProgress}%</p>
@@ -230,7 +293,7 @@ export default function GoalsPage() {
       )}
 
       {/* Список целей */}
-      {filteredGoals.length === 0 && !showForm ? (
+      {sortedGoals.length === 0 && !showForm ? (
         <div className="text-center py-12">
           <p className="text-4xl mb-4">📋</p>
           <h3 className="text-lg font-semibold text-text mb-2">
@@ -250,7 +313,7 @@ export default function GoalsPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filteredGoals.map(goal => (
+          {sortedGoals.map(goal => (
             <GoalCard
               key={goal.id}
               goal={goal}
@@ -258,9 +321,22 @@ export default function GoalsPage() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onProgressChange={handleProgressChange}
+              onComplete={handleComplete}
+              onFail={handleFail}
             />
           ))}
         </div>
+      )}
+
+      {/* ===== МОДАЛКА РЕФЛЕКСИИ ===== */}
+      {reflectionGoal && (
+        <ReflectionModal
+          goalId={reflectionGoal.id}
+          title={reflectionGoal.title}
+          type={reflectionType}
+          onSave={handleReflectionSave}
+          onCancel={handleReflectionCancel}
+        />
       )}
     </div>
   )

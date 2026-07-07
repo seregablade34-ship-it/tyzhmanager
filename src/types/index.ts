@@ -9,6 +9,7 @@ export interface Strategy {
   description: string     // Описание
   sphere: string          // Сфера жизни (здоровье, карьера, и т.д.)
   deadline: string        // Срок (например "2030")
+  status: 'active' | 'completed' | 'cancelled'  // Статус
   createdAt: string       // Дата создания
   updatedAt: string       // Дата обновления
   order: number           // Порядок отображения
@@ -206,6 +207,31 @@ export interface CoachingSession {
   answers: string[]       // 10 ответов (по индексу вопроса)
   currentStep: number     // Текущий шаг (0-9) для wizard
   isCompleted: boolean    // Все 10 вопросов отвечены
+  createdAt: string
+  updatedAt: string
+}
+
+// ==========================================
+// РЕФЛЕКСИЯ ПРИ ЗАВЕРШЕНИИ ЦЕЛИ
+// ==========================================
+
+// Рефлексия при завершении цели (для Стратегии и Целей на год)
+export interface GoalReflection {
+  id?: number
+  goalId?: number         // Связь с целью на год (необязательно)
+  strategyId?: number     // Связь со стратегией (необязательно)
+  type: 'completed' | 'failed'  // Выполнено или не выполнено
+
+  // 3 вопроса при ВЫПОЛНЕНИИ
+  whatWorked?: string     // Что помогло достичь цели?
+  whatLearned?: string    // Чему я научился?
+  whatNext?: string       // Что дальше? Какой следующий шаг?
+
+  // 3 вопроса при НЕВЫПОЛНЕНИИ
+  whatPrevented?: string  // Что помешало?
+  whatWouldChange?: string // Что бы я сделал иначе?
+  isStillRelevant?: string // Цель всё ещё актуальна? Что дальше?
+
   createdAt: string
   updatedAt: string
 }
