@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#2563eb"/>
+  <text x="96" y="72" font-size="48" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold">#тыж</text>
+  <text x="96" y="128" font-size="40" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold">менеджер</text>
+  <text x="96" y="165" font-size="18" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif">дневник целей</text>
+</svg>
