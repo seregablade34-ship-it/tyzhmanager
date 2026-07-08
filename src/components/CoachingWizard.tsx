@@ -65,7 +65,7 @@ export default function CoachingWizard({ goalId, goalTitle, onBack }: Props) {
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<string[]>(Array(10).fill(''))
   const [existingId, setExistingId] = useState<number | null>(null)
-  const [isSaved, setIsSaved] = useState(false)
+  const [, setIsSaved] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
 
   // Загрузка существующих данных
