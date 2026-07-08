@@ -53,6 +53,7 @@ export default function TaskList({
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [statusDropdown, setStatusDropdown] = useState<number | null>(null)
 
   function handleAdd() {
     const trimmed = newTaskTitle.trim()
@@ -65,10 +66,9 @@ export default function TaskList({
     if (e.key === 'Enter') handleAdd()
   }
 
-  function cycleStatus(taskId: number, currentStatus: TaskStatus) {
-    const idx = STATUS_ORDER.indexOf(currentStatus)
-    const next = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length]
-    onUpdateStatus(taskId, next)
+  function handleStatusSelect(taskId: number, status: TaskStatus) {
+    onUpdateStatus(taskId, status)
+    setStatusDropdown(null)
   }
 
   function handleAddSubtask(taskId: number) {
@@ -182,20 +182,56 @@ export default function TaskList({
             const tagCfg = task.tag ? TAG_CONFIG[task.tag] : null
             const isExpanded = expandedTask === task.id
             const completedSubs = subtasks.filter(s => s.isCompleted).length
+            const isDropdownOpen = statusDropdown === task.id
 
             return (
-              <div key={task.id} className={`border-l-4 ${priorityCfg.color} rounded-lg border border-border overflow-hidden`}>
+              <div key={task.id} className={`border-l-4 ${priorityCfg.color} rounded-lg border border-border overflow-visible relative ${isDropdownOpen ? 'z-50' : 'z-0'}`}>
                 {/* Основная строка задачи */}
                 <div className={`flex items-center gap-2 p-3 ${task.status === 'done' ? 'bg-success/5' : 'hover:bg-bg'} transition-colors`}>
 
-                  {/* Кнопка статуса */}
-                  <button
-                    onClick={() => cycleStatus(task.id, task.status || 'not-started')}
-                    className="cursor-pointer text-lg flex-shrink-0"
-                    title={`${statusCfg.label} → клик для смены`}
-                  >
-                    {statusCfg.icon}
-                  </button>
+                  {/* Кнопка статуса с DROPDOWN */}
+                  <div className="relative flex-shrink-0">
+                    <button
+                      onClick={() => setStatusDropdown(isDropdownOpen ? null : task.id)}
+                      className="cursor-pointer text-lg"
+                      title={`${statusCfg.label} → клик для выбора`}
+                    >
+                      {statusCfg.icon}
+                    </button>
+
+                    {/* Выпадающий список статусов */}
+                    {isDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setStatusDropdown(null)}
+                        />
+                        <div className="absolute left-0 top-8 z-50 bg-surface border border-border
+                                        rounded-lg shadow-lg py-1 min-w-[180px]">
+                          {STATUS_ORDER.map(s => {
+                            const cfg = STATUS_CONFIG[s]
+                            const isActive = (task.status || 'not-started') === s
+                            return (
+                              <button
+                                key={s}
+                                onClick={() => handleStatusSelect(task.id, s)}
+                                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2
+                                           transition-colors cursor-pointer
+                                  ${isActive
+                                    ? 'bg-primary/10 text-primary font-semibold'
+                                    : 'text-text hover:bg-bg'
+                                  }`}
+                              >
+                                <span className="text-base">{cfg.icon}</span>
+                                <span>{cfg.label}</span>
+                                {isActive && <span className="ml-auto text-primary text-xs">✓</span>}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
 
                   {/* Название */}
                   <span className={`flex-1 ${task.status === 'done' ? 'line-through text-text-light' : 'text-text'}`}>
