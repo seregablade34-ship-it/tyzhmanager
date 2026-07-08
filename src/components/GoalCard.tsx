@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { Goal, MonthProgress } from '../types'
 import MonthlyTracker, { createEmptyMonthly } from './MonthlyTracker'
+import ShareCard from './ShareCard'
 
 const SPHERE_ICONS: Record<string, string> = {
   'Здоровье': '💪',
@@ -39,6 +41,8 @@ export default function GoalCard({
   onFail,
   onMonthlyChange,
 }: GoalCardProps) {
+  const [showShare, setShowShare] = useState(false)
+
   const icon = SPHERE_ICONS[goal.sphere] || '🎯'
   const status = STATUS_LABELS[goal.status] || STATUS_LABELS.active
   const monthly = goal.monthlyProgress || createEmptyMonthly()
@@ -87,6 +91,16 @@ export default function GoalCard({
         </div>
 
         <div className="flex gap-1">
+          {/* Кнопка ПОДЕЛИТЬСЯ */}
+          <button
+            onClick={() => setShowShare(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg
+                       text-text-light hover:text-primary hover:bg-primary/10
+                       transition-colors cursor-pointer text-sm"
+            title="Поделиться целью"
+          >
+            📤
+          </button>
           <button
             onClick={() => onEdit(goal)}
             className="w-8 h-8 flex items-center justify-center rounded-lg
@@ -201,6 +215,19 @@ export default function GoalCard({
           </span>
         </div>
       )}
+
+      {/* ===== МОДАЛКА ШЕРИНГА ===== */}
+      <ShareCard
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        goal={{
+          title: goal.title,
+          sphere: goal.sphere,
+          progress: goal.progress,
+          status: goal.status,
+          year: goal.year,
+        }}
+      />
     </div>
   )
 }
