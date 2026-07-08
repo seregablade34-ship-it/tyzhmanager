@@ -1,7 +1,7 @@
+import { useEffect } from 'react'
 import { useAchievements, ACHIEVEMENTS, type AchievementDef } from '../hooks/useAchievements'
 import { useCombo } from '../hooks/useCombo'
 
-// Все ранги для отображения
 const ALL_RANKS = [
   { level: 1, title: 'Новичок',       icon: '🌱', minXp: 0 },
   { level: 2, title: 'Практик',       icon: '📝', minXp: 50 },
@@ -13,7 +13,6 @@ const ALL_RANKS = [
   { level: 8, title: 'Легенда',       icon: '💎', minXp: 2000 },
 ]
 
-// Категории для группировки
 const CATEGORIES: { key: string; title: string; icon: string }[] = [
   { key: 'combo',   title: 'Комбо',       icon: '🔥' },
   { key: 'goals',   title: 'Цели',        icon: '🎯' },
@@ -29,8 +28,16 @@ export default function AchievementsPage() {
     rank,
     xpProgress,
     isLoading,
+    checkAll,
   } = useAchievements()
   const { currentCombo, maxCombo } = useCombo()
+
+  // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: вызываем checkAll при открытии страницы!
+  useEffect(() => {
+    if (!isLoading) {
+      checkAll(currentCombo)
+    }
+  }, [isLoading, currentCombo, checkAll])
 
   if (isLoading) {
     return (
@@ -47,25 +54,21 @@ export default function AchievementsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
 
-      {/* === ЗАГОЛОВОК === */}
       <h1 className="text-2xl font-bold text-text mb-6">🏆 Достижения</h1>
 
       {/* === ОБЩАЯ СТАТИСТИКА === */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        {/* Ранг */}
         <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <span className="text-4xl block mb-2">{rank.icon}</span>
           <p className="font-bold text-text">{rank.title}</p>
           <p className="text-xs text-text-light">Текущий ранг</p>
         </div>
 
-        {/* XP */}
         <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <p className="text-3xl font-bold text-primary mb-1">{totalXp}</p>
           <p className="text-sm text-text-light">Очков опыта (XP)</p>
         </div>
 
-        {/* Комбо */}
         <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <p className="text-3xl font-bold text-warning mb-1">🔥 {currentCombo}</p>
           <p className="text-sm text-text-light">
@@ -73,7 +76,6 @@ export default function AchievementsPage() {
           </p>
         </div>
 
-        {/* Бейджи */}
         <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <p className="text-3xl font-bold text-success mb-1">{unlockedCount}/{totalCount}</p>
           <p className="text-sm text-text-light">Бейджей открыто</p>
@@ -95,7 +97,6 @@ export default function AchievementsPage() {
           />
         </div>
 
-        {/* Все ранги */}
         <div className="flex items-center justify-between mt-4 gap-2 flex-wrap">
           {ALL_RANKS.map((r: { icon: string; title: string; minXp: number }, i: number) => (
             <div
