@@ -10,6 +10,7 @@ const FIELDS = [
     hint: 'Сформулируй цель в прошедшем времени, как уже достигнутый факт.',
     placeholder: 'Я написал и запустил пилот электронного дневника #тыжменеджер',
     emoji: '✨',
+    tip: '💡 Примеры:\n• «Я создал...»\n• «Я достиг...»\n• «Я заработал...»\n\nФормулируй так, будто это УЖЕ случилось. Мозг начинает искать пути к цели, когда она описана как факт.',
   },
   {
     key: 'personal',
@@ -18,6 +19,7 @@ const FIELDS = [
     hint: 'Личная ответственность за результат. Что именно ТЫ делаешь? Это в твоём круге влияния.',
     placeholder: 'Я лично разрабатываю структуру, тестирую, собираю обратную связь',
     emoji: '💪',
+    tip: '💡 Ключевой вопрос: это в моём круге влияния?\n\n✅ «Я изучаю, создаю, организую...»\n❌ «Начальник повысит меня...»\n\nПроактивность — это когда ТЫ действуешь, а не ждёшь, пока кто-то сделает за тебя.',
   },
   {
     key: 'specific',
@@ -26,6 +28,7 @@ const FIELDS = [
     hint: 'Что именно? Максимально конкретно опиши результат.',
     placeholder: 'PWA-приложение с ежедневником, целями, PP SMART, экшен-каскадом',
     emoji: '🎯',
+    tip: '💡 Проверь конкретность:\n\n❌ «Стать лучше» — размыто\n✅ «Пробежать полумарафон 21.1 км» — конкретно\n\n❌ «Больше зарабатывать» — размыто\n✅ «Доход 200 000 ₽/мес от консалтинга» — конкретно',
   },
   {
     key: 'measurable',
@@ -34,6 +37,7 @@ const FIELDS = [
     hint: 'Сколько? По какому показателю ты поймёшь, что цель достигнута?',
     placeholder: '10 тестовых пользователей дали обратную связь, 80% функций работают',
     emoji: '📊',
+    tip: '💡 Вопросы для измеримости:\n\n• Сколько? (число, %, сумма)\n• Как я узнаю, что достиг?\n• Какой конкретный результат?\n\nПримеры: «10 клиентов», «80% готовности», «3 статьи», «50 000 ₽ дохода».',
   },
   {
     key: 'achievable',
@@ -42,6 +46,7 @@ const FIELDS = [
     hint: 'Как? Какие ресурсы и шаги нужны? Это реалистично?',
     placeholder: 'Использую ИИ как помощника, поэтапная разработка по плану из 14 шагов',
     emoji: '🛠️',
+    tip: '💡 Проверь достижимость:\n\n• Какие ресурсы есть? (время, деньги, навыки)\n• Какие ресурсы нужно найти?\n• Есть ли примеры, что другие это сделали?\n\nЦель должна быть вызовом, но НЕ фантастикой.',
   },
   {
     key: 'relevant',
@@ -50,6 +55,7 @@ const FIELDS = [
     hint: 'Зачем? Как эта цель связана с твоей стратегией и ценностями?',
     placeholder: 'Развитие личного бренда тренера, помощь людям в достижении целей',
     emoji: '🧭',
+    tip: '💡 Вопросы для релевантности:\n\n• Зачем мне это?\n• Как это связано с моими ценностями?\n• Это приближает к стратегической цели?\n• Буду ли я жалеть, если НЕ сделаю?\n\nЦель без «зачем» — просто задача.',
   },
   {
     key: 'timeBound',
@@ -58,6 +64,8 @@ const FIELDS = [
     hint: 'Когда? Конкретный дедлайн.',
     placeholder: 'До 31 августа 2026 года',
     emoji: '⏰',
+    tip: '💡 Правила дедлайна:\n\n✅ «До 31 августа 2026» — конкретно\n❌ «Когда-нибудь» — не работает\n\nДедлайн создаёт urgency. Без него цель превращается в мечту.',
+    isDate: true,
   },
 ]
 
@@ -92,6 +100,9 @@ export default function PpSmartForm({
     timeBound: '',
   })
 
+  // Какой tooltip открыт
+  const [openTip, setOpenTip] = useState<string | null>(null)
+
   // Заполнить при редактировании
   useEffect(() => {
     if (editingPpSmart) {
@@ -117,6 +128,19 @@ export default function PpSmartForm({
   const totalCount = FIELDS.length
   const progressPercent = Math.round((filledCount / totalCount) * 100)
 
+  // Форматирование даты из input[type=date] → "31 августа 2026"
+  function formatDateRussian(dateStr: string): string {
+    if (!dateStr) return ''
+    const months = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+    ]
+    const [year, month, day] = dateStr.split('-')
+    if (!year || !month || !day) return dateStr
+    const monthIdx = parseInt(month, 10) - 1
+    return `${parseInt(day, 10)} ${months[monthIdx]} ${year}`
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSave(values)
@@ -129,9 +153,11 @@ export default function PpSmartForm({
         <h3 className="font-semibold text-text text-lg">
           {editingPpSmart ? '✏️ Редактировать PP SMART' : '➕ Новый PP SMART'}
         </h3>
-        <p className="text-sm text-text-light mt-1">
-          Для цели: <span className="font-medium text-text">«{goalTitle}»</span>
-        </p>
+        {goalTitle && (
+          <p className="text-sm text-text-light mt-1">
+            Для цели: <span className="font-medium text-text">«{goalTitle}»</span>
+          </p>
+        )}
       </div>
 
       {/* Прогресс заполнения */}
@@ -165,6 +191,20 @@ export default function PpSmartForm({
               <span className="text-sm font-semibold text-text">
                 {field.title}
               </span>
+              {/* Кнопка подсказки */}
+              <button
+                type="button"
+                onClick={() => setOpenTip(openTip === field.key ? null : field.key)}
+                className={`w-5 h-5 flex items-center justify-center rounded-full text-xs
+                           cursor-pointer transition-colors
+                           ${openTip === field.key
+                             ? 'bg-primary text-white'
+                             : 'bg-primary/10 text-primary hover:bg-primary/20'
+                           }`}
+                title="Подробная подсказка"
+              >
+                ?
+              </button>
             </div>
 
             {/* Подсказка */}
@@ -172,17 +212,67 @@ export default function PpSmartForm({
               {field.hint}
             </p>
 
-            {/* Поле ввода */}
-            <textarea
-              value={values[field.key as keyof typeof values]}
-              onChange={(e) => updateField(field.key, e.target.value)}
-              placeholder={field.placeholder}
-              rows={2}
-              className="w-full px-3 py-2 rounded-lg border border-border
-                         bg-surface text-text placeholder-text-light/40 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-primary/30
-                         focus:border-primary transition-colors resize-none"
-            />
+            {/* Развёрнутая подсказка (tooltip) */}
+            {openTip === field.key && (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-2 ml-8">
+                <pre className="text-xs text-text whitespace-pre-wrap font-sans leading-relaxed">
+                  {field.tip}
+                </pre>
+                <button
+                  type="button"
+                  onClick={() => setOpenTip(null)}
+                  className="text-xs text-primary hover:text-primary-dark mt-2 cursor-pointer"
+                >
+                  ✕ Закрыть
+                </button>
+              </div>
+            )}
+
+            {/* Поле ввода — DatePicker для T, textarea для остальных */}
+            {field.isDate ? (
+              <div className="space-y-2">
+                <input
+                  type="date"
+                  value={
+                    values.timeBound.match(/^\d{4}-\d{2}-\d{2}$/)
+                      ? values.timeBound
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const formatted = formatDateRussian(e.target.value)
+                    updateField('timeBound', formatted ? `До ${formatted}` : '')
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-border
+                             bg-surface text-text text-sm
+                             focus:outline-none focus:ring-2 focus:ring-primary/30
+                             focus:border-primary transition-colors"
+                />
+                <textarea
+                  value={values.timeBound}
+                  onChange={(e) => updateField('timeBound', e.target.value)}
+                  placeholder={field.placeholder}
+                  rows={1}
+                  className="w-full px-3 py-2 rounded-lg border border-border
+                             bg-surface text-text placeholder-text-light/40 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-primary/30
+                             focus:border-primary transition-colors resize-none"
+                />
+                <p className="text-[10px] text-text-light ml-1">
+                  Выберите дату в календаре или введите текст вручную
+                </p>
+              </div>
+            ) : (
+              <textarea
+                value={values[field.key as keyof typeof values]}
+                onChange={(e) => updateField(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-border
+                           bg-surface text-text placeholder-text-light/40 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-colors resize-none"
+              />
+            )}
           </div>
         ))}
 
