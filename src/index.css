@@ -4,27 +4,45 @@
 /* Настраиваем цветовую палитру проекта #тыжменеджер */
 @theme {
   /* Основные цвета */
-  --color-primary: #2563eb;       /* Синий — уверенность, надёжность */
-  --color-primary-light: #3b82f6; /* Светлый синий */
-  --color-primary-dark: #1d4ed8;  /* Тёмный синий */
+  --color-primary: #2563eb;
+  --color-primary-light: #3b82f6;
+  --color-primary-dark: #1d4ed8;
 
   /* Цвета успеха и ошибок */
-  --color-success: #16a34a;       /* Зелёный — выполнено */
-  --color-warning: #f59e0b;       /* Жёлтый — внимание */
-  --color-danger: #dc2626;        /* Красный — срочно */
-
-  /* Фон и текст */
-  --color-bg: #f8fafc;            /* Светлый фон */
-  --color-surface: #ffffff;       /* Белый фон карточек */
-  --color-text: #1e293b;          /* Основной текст */
-  --color-text-light: #64748b;    /* Серый текст */
-  --color-border: #e2e8f0;        /* Цвет границ */
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
 
   /* Шкала энергии */
-  --color-energy-red: #ef4444;    /* 0-3: низкая энергия */
-  --color-energy-gray: #6b7280;   /* 4-6: средняя */
-  --color-energy-green: #22c55e;  /* 7-8: хорошая */
-  --color-energy-yellow: #eab308; /* 9-10: максимальная */
+  --color-energy-red: #ef4444;
+  --color-energy-gray: #6b7280;
+  --color-energy-green: #22c55e;
+  --color-energy-yellow: #eab308;
+
+  /* Фон и текст — через CSS-переменные для поддержки тёмной темы */
+  --color-bg: var(--app-bg);
+  --color-surface: var(--app-surface);
+  --color-text: var(--app-text);
+  --color-text-light: var(--app-text-light);
+  --color-border: var(--app-border);
+}
+
+/* ═══ СВЕТЛАЯ ТЕМА (по умолчанию) ═══ */
+:root {
+  --app-bg: #f8fafc;
+  --app-surface: #ffffff;
+  --app-text: #1e293b;
+  --app-text-light: #64748b;
+  --app-border: #e2e8f0;
+}
+
+/* ═══ ТЁМНАЯ ТЕМА ═══ */
+.dark {
+  --app-bg: #0f172a;
+  --app-surface: #1e293b;
+  --app-text: #f1f5f9;
+  --app-text-light: #94a3b8;
+  --app-border: #334155;
 }
 
 /* Базовые стили для всего приложения */
@@ -35,6 +53,7 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 /* Анимация появления toast-уведомления */
