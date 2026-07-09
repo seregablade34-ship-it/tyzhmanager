@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: '/stats',       icon: '📊', label: 'Статистика' },
   { to: '/settings',    icon: '⚙️', label: 'Настройки' },
   { to: '/about',       icon: 'ℹ️', label: 'О проекте' },
+  { to: '/instruction', icon: '📖', label: 'Инструкция' },
 ]
 
 export default function Sidebar() {
@@ -20,7 +21,7 @@ export default function Sidebar() {
   const { rank, xpProgress, totalXp } = useAchievements()
 
   return (
-    <aside className="w-56 h-screen bg-surface border-r border-border flex flex-col fixed left-0 top-0">
+    <aside className="w-56 h-full bg-surface border-r border-border flex flex-col overflow-y-auto">
 
       {/* === ЛОГОТИП === */}
       <div className="p-4 border-b border-border">

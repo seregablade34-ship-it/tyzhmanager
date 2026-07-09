@@ -11,6 +11,7 @@ import AchievementsPage from './pages/AchievementsPage'
 import StatsPage from './pages/StatsPage'
 import SettingsPage from './pages/SettingsPage'
 import AboutPage from './pages/AboutPage'
+import InstructionPage from './pages/InstructionPage'
 import Onboarding from './components/Onboarding'
 
 const ONBOARDING_KEY = 'tyzhmanager_onboarding_done'
@@ -53,6 +54,8 @@ export default function App() {
             <Route path="/stats" element={<StatsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/instruction" element={<InstructionPage />} />
+            <Route path="/instruction" element={<InstructionPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
