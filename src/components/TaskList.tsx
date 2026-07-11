@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { TaskItem } from '../hooks/useDailyEntry'
-import type { TaskStatus, TaskPriority, TaskTag } from '../types'
+import type { TaskStatus, TaskPriority, TaskTag, TransferReason } from '../types'
+import TaskTransferModal from './TaskTransferModal'
 
 interface ImportGoal {
   id: number
@@ -10,6 +11,7 @@ interface ImportGoal {
 
 interface TaskListProps {
   tasks: TaskItem[]
+  currentDate: string // YYYY-MM-DD — нужен для переноса
   onAdd: (title: string) => void
   onUpdateStatus: (taskId: number, status: TaskStatus) => void
   onUpdatePriority: (taskId: number, priority: TaskPriority) => void
@@ -18,6 +20,12 @@ interface TaskListProps {
   onAddSubtask: (taskId: number, title: string) => void
   onToggleSubtask: (taskId: number, subtaskId: string) => void
   onDeleteSubtask: (taskId: number, subtaskId: string) => void
+  onTransferTask?: (taskId: number, data: {
+    toDate: string
+    type: 'move' | 'duplicate'
+    reason: TransferReason
+    comment?: string
+  }) => void
   importGoals?: ImportGoal[]
 }
 
@@ -45,15 +53,18 @@ const TAG_CONFIG: Record<TaskTag, { label: string; icon: string; bg: string }> =
 const STATUS_ORDER: TaskStatus[] = ['not-started', 'planned', 'in-progress', 'done']
 
 export default function TaskList({
-  tasks, onAdd, onUpdateStatus, onUpdatePriority, onUpdateTag,
+  tasks, currentDate, onAdd, onUpdateStatus, onUpdatePriority, onUpdateTag,
   onDelete, onAddSubtask, onToggleSubtask, onDeleteSubtask,
-  importGoals,
+  onTransferTask, importGoals,
 }: TaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
   const [showImport, setShowImport] = useState(false)
   const [statusDropdown, setStatusDropdown] = useState<number | null>(null)
+  // Перенос
+  const [transferTaskId, setTransferTaskId] = useState<number | null>(null)
+  const [transferTaskTitle, setTransferTaskTitle] = useState('')
 
   function handleAdd() {
     const trimmed = newTaskTitle.trim()
@@ -81,6 +92,11 @@ export default function TaskList({
   function handleImportGoal(goal: ImportGoal) {
     onAdd(`📋 ${goal.title}`)
     setShowImport(false)
+  }
+
+  function openTransferModal(task: TaskItem) {
+    setTransferTaskId(task.id)
+    setTransferTaskTitle(task.title)
   }
 
   const doneCount = tasks.filter(t => t.status === 'done').length
@@ -252,6 +268,17 @@ export default function TaskList({
                     </span>
                   )}
 
+                  {/* Перенос/дубль */}
+                  {onTransferTask && (
+                    <button
+                      onClick={() => openTransferModal(task)}
+                      className="text-text-light hover:text-primary transition-colors cursor-pointer text-sm"
+                      title="Перенести / дублировать"
+                    >
+                      📦
+                    </button>
+                  )}
+
                   {/* Раскрыть */}
                   <button
                     onClick={() => setExpandedTask(isExpanded ? null : task.id)}
@@ -272,6 +299,20 @@ export default function TaskList({
                 {/* Раскрытая панель */}
                 {isExpanded && (
                   <div className="px-3 pb-3 pt-1 bg-bg/50 border-t border-border">
+                    {/* Перенос/дубль кнопки в раскрытой панели */}
+                    {onTransferTask && (
+                      <div className="mb-3">
+                        <p className="text-xs text-text-light mb-1">Действия:</p>
+                        <button
+                          onClick={() => openTransferModal(task)}
+                          className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-colors
+                                     bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                        >
+                          📦 Перенести / 📋 Дублировать
+                        </button>
+                      </div>
+                    )}
+
                     {/* Управление статусом */}
                     <div className="mb-3">
                       <p className="text-xs text-text-light mb-1">Статус:</p>
@@ -409,6 +450,20 @@ export default function TaskList({
           </div>
         </div>
       )}
+
+      {/* Модалка переноса */}
+      <TaskTransferModal
+        isOpen={transferTaskId !== null}
+        onClose={() => setTransferTaskId(null)}
+        taskTitle={transferTaskTitle}
+        currentDate={currentDate}
+        onConfirm={(data) => {
+          if (transferTaskId && onTransferTask) {
+            onTransferTask(transferTaskId, data)
+          }
+          setTransferTaskId(null)
+        }}
+      />
     </div>
   )
 }

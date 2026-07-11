@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   getToday,
   getPrevDay,
@@ -10,15 +10,17 @@ import {
 import { useDailyEntry } from '../hooks/useDailyEntry'
 import { getDailyQuote } from '../utils/quotes'
 import { db } from '../db/database'
-import type { Goal } from '../types'
+import type { Goal, TransferReason } from '../types'
 import EnergyScale from '../components/EnergyScale'
 import MorningBlock from '../components/MorningBlock'
 import TaskList from '../components/TaskList'
 import EveningBlock from '../components/EveningBlock'
+import CalendarPopup from '../components/CalendarPopup'
 
 export default function DailyPage() {
   const [selectedDate, setSelectedDate] = useState(getToday())
   const [goals, setGoals] = useState<Goal[]>([])
+  const [showCalendar, setShowCalendar] = useState(false)
 
   const {
     entry,
@@ -73,6 +75,61 @@ export default function DailyPage() {
     return '📖 Прошедший день'
   }
 
+  // Перенос / дублирование задачи
+  const handleTransferTask = useCallback(async (
+    taskId: number,
+    data: {
+      toDate: string
+      type: 'move' | 'duplicate'
+      reason: TransferReason
+      comment?: string
+    }
+  ) => {
+    try {
+      const task = await db.tasks.get(taskId)
+      if (!task) return
+
+      const now = new Date().toISOString()
+
+      // 1. Создаём копию задачи на новую дату
+      const newTask = {
+        ...task,
+        id: undefined,
+        date: data.toDate,
+        status: 'not-started' as const,
+        subtasks: task.subtasks?.map(st => ({ ...st, isCompleted: false })) || [],
+        createdAt: now,
+        updatedAt: now,
+      }
+      await db.tasks.add(newTask)
+
+      // 2. Если перенос (move) — удаляем оригинал
+      if (data.type === 'move') {
+        await db.tasks.delete(taskId)
+      }
+
+      // 3. Сохраняем запись о переносе в статистику
+      await db.taskTransfers.add({
+        taskId,
+        fromDate: selectedDate,
+        toDate: data.toDate,
+        type: data.type,
+        reason: data.reason,
+        comment: data.comment,
+        createdAt: now,
+      })
+
+      // 4. Обновляем UI — перезагружаем задачи текущего дня
+
+      // Принудительная перезагрузка через смену даты туда-обратно
+      setSelectedDate('')
+      setTimeout(() => setSelectedDate(selectedDate), 50)
+
+    } catch (error) {
+      console.error('Ошибка переноса задачи:', error)
+    }
+  }, [selectedDate])
+
   if (isLoading) {
     return (
       <div className="p-6 max-w-3xl mx-auto text-center text-text-light">
@@ -98,14 +155,21 @@ export default function DailyPage() {
             ◀
           </button>
 
-          <div className="text-center">
+          {/* ЦЕНТР — клик открывает календарь */}
+          <button
+            onClick={() => setShowCalendar(true)}
+            className="text-center cursor-pointer hover:bg-bg rounded-xl px-4 py-2 transition-colors"
+          >
             <p className="text-sm text-text-light mb-1">
               {getDayLabel()}
             </p>
             <h1 className="text-xl font-bold text-text">
               {formatDateHuman(selectedDate)}
             </h1>
-          </div>
+            <p className="text-[10px] text-text-light/60 mt-0.5">
+              📅 нажмите для выбора даты
+            </p>
+          </button>
 
           <button
             onClick={goToNextDay}
@@ -166,6 +230,7 @@ export default function DailyPage() {
       <div className="mb-4">
         <TaskList
           tasks={tasks}
+          currentDate={selectedDate}
           onAdd={addTask}
           onUpdateStatus={updateTaskStatus}
           onUpdatePriority={updateTaskPriority}
@@ -174,6 +239,7 @@ export default function DailyPage() {
           onAddSubtask={addSubtask}
           onToggleSubtask={toggleSubtask}
           onDeleteSubtask={deleteSubtask}
+          onTransferTask={handleTransferTask}
           importGoals={importGoals}
         />
       </div>
@@ -189,6 +255,17 @@ export default function DailyPage() {
           onTomorrowChange={updateTomorrow}
         />
       </div>
+
+      {/* === КАЛЕНДАРЬ-ПОПАП === */}
+      <CalendarPopup
+        isOpen={showCalendar}
+        onClose={() => setShowCalendar(false)}
+        currentDate={selectedDate}
+        onSelectDate={(date) => {
+          setSelectedDate(date)
+          setShowCalendar(false)
+        }}
+      />
 
     </div>
   )

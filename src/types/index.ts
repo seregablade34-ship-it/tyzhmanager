@@ -241,3 +241,17 @@ export interface GoalReflection {
   createdAt: string
   updatedAt: string
 }
+
+// --- ПЕРЕНОС/ДУБЛИРОВАНИЕ ЗАДАЧ ---
+export type TransferReason = 'routine' | 'not-finished' | 'other'
+
+export interface TaskTransfer {
+  id?: number
+  taskId: number              // Исходная задача
+  fromDate: string            // Откуда (дата)
+  toDate: string              // Куда (дата)
+  type: 'move' | 'duplicate'  // Перенос или дубль
+  reason: TransferReason      // Причина
+  comment?: string            // Комментарий (для not-finished и other)
+  createdAt: string
+}

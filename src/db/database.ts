@@ -20,6 +20,7 @@ import type {
   ThreePResult,
   CoachingSession,
   GoalReflection,
+  TaskTransfer,
 } from '../types'
 
 // Класс нашей базы данных
@@ -42,6 +43,8 @@ class TyzhManagerDB extends Dexie {
   coachingSessions!: Table<CoachingSession>
   // Рефлексия
   goalReflections!: Table<GoalReflection>
+  // Переносы задач
+  taskTransfers!: Table<TaskTransfer>
 
   constructor() {
     super('tyzhmanager-db')
@@ -121,8 +124,28 @@ class TyzhManagerDB extends Dexie {
       eisenhowerItems:  '++id, goalId, quadrant',
       threePResults:    '++id, goalId',
       coachingSessions: '++id, goalId, isCompleted',
-      // Новая таблица
       goalReflections:  '++id, goalId, strategyId, type',
+    })
+
+    // Версия 5 — переносы/дублирование задач
+    this.version(5).stores({
+      strategies:       '++id, sphere, deadline, order',
+      goals:            '++id, strategyId, sphere, year, status, order',
+      ppSmarts:         '++id, goalId',
+      actionSteps:      '++id, goalId, parentId, isCompleted, order',
+      dailyEntries:     '++id, &date',
+      tasks:            '++id, dailyEntryId, goalId, actionStepId, date, status, priority, tag, order',
+      goalEvaluations:  '++id, goalId, date',
+      achievements:     '++id, type, isUnlocked',
+      combos:           '++id, type',
+      userSettings:     '++id',
+      descartesSquares: '++id, goalId',
+      eisenhowerItems:  '++id, goalId, quadrant',
+      threePResults:    '++id, goalId',
+      coachingSessions: '++id, goalId, isCompleted',
+      goalReflections:  '++id, goalId, strategyId, type',
+      // Новая таблица
+      taskTransfers:    '++id, taskId, fromDate, toDate, type, reason',
     })
   }
 }
