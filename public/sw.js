@@ -1,66 +1,54 @@
-const CACHE_NAME = 'tyzhmanager-v1'
+// ===== Service Worker #тыжменеджер =====
+// Версию нужно менять при каждом обновлении!
+const CACHE_VERSION = 'v2'
+const CACHE_NAME = 'tyzhmanager-' + CACHE_VERSION
 
-// Файлы для кэширования при установке
-const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/icon-192.svg',
-  '/manifest.json',
-]
-
-// ═══ УСТАНОВКА — кэшируем основные файлы ═══
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
-  )
+// При установке — сразу активируем новый SW
+self.addEventListener('install', function(event) {
+  self.skipWaiting()
 })
 
-// ═══ АКТИВАЦИЯ — удаляем старые кэши ═══
-self.addEventListener('activate', (event) => {
+// При активации — удаляем старые кэши
+self.addEventListener('activate', function(event) {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+          .filter(function(name) { return name !== CACHE_NAME })
+          .map(function(name) { return caches.delete(name) })
       )
-    }).then(() => self.clients.claim())
+    }).then(function() {
+      return self.clients.claim()
+    })
   )
 })
 
-// ═══ FETCH — стратегия Network First, затем Cache ═══
-self.addEventListener('fetch', (event) => {
-  // Пропускаем запросы не GET
+// Стратегия: СНАЧАЛА СЕТЬ, потом кэш
+// Это гарантирует актуальный контент
+self.addEventListener('fetch', function(event) {
+  // Пропускаем не-GET запросы и chrome-extension
   if (event.request.method !== 'GET') return
-
-  // Пропускаем chrome-extension и другие схемы
-  if (!event.request.url.startsWith('http')) return
+  if (event.request.url.startsWith('chrome-extension')) return
 
   event.respondWith(
     fetch(event.request)
-      .then((response) => {
-        // Клонируем ответ и сохраняем в кэш
-        if (response.status === 200) {
-          const responseClone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone)
+      .then(function(response) {
+        // Если сеть работает — кэшируем копию
+        if (response.ok) {
+          var clone = response.clone()
+          caches.open(CACHE_NAME).then(function(cache) {
+            cache.put(event.request, clone)
           })
         }
         return response
       })
-      .catch(() => {
-        // Офлайн — берём из кэша
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse
-          }
-          // Если запрос навигации — отдаём index.html
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html')
-          }
-          return new Response('Offline', { status: 503 })
+      .catch(function() {
+        // Если сети нет — отдаём из кэша
+        return caches.match(event.request).then(function(cached) {
+          return cached || new Response('Нет подключения к интернету', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          })
         })
       })
   )

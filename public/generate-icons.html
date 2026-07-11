@@ -1,26 +1,30 @@
 <!DOCTYPE html>
 <html>
 <body style="padding:20px;font-family:Arial">
-  <h2>Скачайте обе иконки и положите в папку public/</h2>
+  <h2>Скачайте обе иконки в папку public/</h2>
 
-  <h3>192×192:</h3>
+  <h3>192x192:</h3>
   <canvas id="c192" width="192" height="192"></canvas>
   <br><br>
-  <a id="dl192" download="icon-192.png" style="font-size:20px">⬇️ Скачать icon-192.png</a>
+  <a id="dl192" download="icon-192.png" style="font-size:20px;color:blue">
+    ⬇️ Скачать icon-192.png
+  </a>
 
-  <h3 style="margin-top:30px">512×512:</h3>
+  <h3 style="margin-top:30px">512x512:</h3>
   <canvas id="c512" width="512" height="512"></canvas>
   <br><br>
-  <a id="dl512" download="icon-512.png" style="font-size:20px">⬇️ Скачать icon-512.png</a>
+  <a id="dl512" download="icon-512.png" style="font-size:20px;color:blue">
+    ⬇️ Скачать icon-512.png
+  </a>
 
   <script>
     function drawIcon(canvas, size) {
-      const ctx = canvas.getContext('2d')
+      var ctx = canvas.getContext('2d')
+      var r = size * 0.2
 
-      // Фон — синий квадрат со скруглением
+      // Синий фон со скруглением
       ctx.fillStyle = '#2563eb'
       ctx.beginPath()
-      const r = size * 0.16
       ctx.moveTo(r, 0)
       ctx.lineTo(size - r, 0)
       ctx.quadraticCurveTo(size, 0, size, r)
@@ -33,23 +37,16 @@
       ctx.closePath()
       ctx.fill()
 
-      // Текст
+      // Текст "#Т" — крупный, по центру
       ctx.fillStyle = 'white'
       ctx.textAlign = 'center'
-
-      ctx.font = `bold ${size * 0.25}px Arial`
-      ctx.fillText('#тыж', size / 2, size * 0.37)
-
-      ctx.font = `bold ${size * 0.20}px Arial`
-      ctx.fillText('менеджер', size / 2, size * 0.65)
-
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'
-      ctx.font = `${size * 0.09}px Arial`
-      ctx.fillText('дневник целей', size / 2, size * 0.86)
+      ctx.textBaseline = 'middle'
+      ctx.font = 'bold ' + (size * 0.45) + 'px Arial'
+      ctx.fillText('#Т', size / 2, size / 2)
     }
 
-    const c192 = document.getElementById('c192')
-    const c512 = document.getElementById('c512')
+    var c192 = document.getElementById('c192')
+    var c512 = document.getElementById('c512')
     drawIcon(c192, 192)
     drawIcon(c512, 512)
 
