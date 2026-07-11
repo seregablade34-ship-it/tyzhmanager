@@ -36,6 +36,7 @@ const HINTS: Record<string, string> = {
   productivity: 'Среднее количество задач в день, процент выполнения и самый продуктивный день недели.',
   achievements: 'Ваш прогресс в системе достижений: открытые бейджи, XP и текущий ранг.',
   tools: 'Сколько раз вы использовали каждый инструмент: PP SMART, каскад, Декарт и другие.',
+  transfers: 'Статистика переносов и дублирований задач: сколько раз, по каким причинам.',
 }
 
 // ─── Компонент подсказки ───
@@ -86,10 +87,11 @@ export default function StatsPage() {
   const [eisenhowerItems, setEisenhowerItems] = useState<any[]>([])
   const [threePResults, setThreePResults] = useState<any[]>([])
   const [coachingSessions, setCoachingSessions] = useState<any[]>([])
+  const [taskTransfers, setTaskTransfers] = useState<any[]>([])
 
   // ─── Загрузка ВСЕХ данных (авто-обновление) ───
   const loadAll = useCallback(async () => {
-    const [de, t, g, s, pp, as2, ds, ei, tp, cs] = await Promise.all([
+    const [de, t, g, s, pp, as2, ds, ei, tp, cs, tt] = await Promise.all([
       db.dailyEntries.toArray(),
       db.tasks.toArray(),
       db.goals.toArray(),
@@ -100,6 +102,7 @@ export default function StatsPage() {
       db.eisenhowerItems.toArray(),
       db.threePResults.toArray(),
       db.coachingSessions.toArray(),
+      db.taskTransfers.toArray(),
     ])
     setDailyEntries(de)
     setTasks(t)
@@ -111,6 +114,7 @@ export default function StatsPage() {
     setEisenhowerItems(ei)
     setThreePResults(tp)
     setCoachingSessions(cs)
+    setTaskTransfers(tt)
   }, [])
 
   useEffect(() => { loadAll() }, [loadAll])
@@ -206,7 +210,6 @@ export default function StatsPage() {
   // ─── 10. Сферы жизни (PieChart) ───
   const spherePieData = useMemo(() => {
     const map: Record<string, number> = {}
-    // Считаем и стратегии, и годовые цели
     strategies.forEach((s: any) => {
       const sphere = s.sphere || 'Без сферы'
       map[sphere] = (map[sphere] || 0) + 1
@@ -249,6 +252,26 @@ export default function StatsPage() {
       bestDay: bestDay ? bestDay[0] : '—',
     }
   }, [filteredTasks, tasksDone, tasksPercent])
+
+  // ─── 13. Статистика переносов ───
+  const transferStats = useMemo(() => {
+    const moves = taskTransfers.filter((t: any) => t.type === 'move').length
+    const duplicates = taskTransfers.filter((t: any) => t.type === 'duplicate').length
+    const byReason = {
+      routine: taskTransfers.filter((t: any) => t.reason === 'routine').length,
+      notFinished: taskTransfers.filter((t: any) => t.reason === 'not-finished').length,
+      other: taskTransfers.filter((t: any) => t.reason === 'other').length,
+    }
+    return { total: taskTransfers.length, moves, duplicates, byReason }
+  }, [taskTransfers])
+
+  const transferPieData = useMemo(() => {
+    return [
+      { name: '🔄 Рутинная', value: transferStats.byReason.routine, color: '#3b82f6' },
+      { name: '⏰ Не успел', value: transferStats.byReason.notFinished, color: '#f59e0b' },
+      { name: '📝 Другое', value: transferStats.byReason.other, color: '#8b5cf6' },
+    ].filter(d => d.value > 0)
+  }, [transferStats])
 
   // ─── Кастомный label для PieChart (цветной) ───
   const coloredLabel = ({ name, value, x, y, midAngle = 0, color, index = 0 }: any) => {
@@ -540,6 +563,76 @@ export default function StatsPage() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* === 📦 ПЕРЕНОСЫ ЗАДАЧ === */}
+      <div className="bg-surface border border-border rounded-xl p-4 mb-6">
+        <h2 className="text-lg font-semibold text-text mb-4">
+          📦 Переносы и дубли задач
+          <HintButton hintKey="transfers" />
+        </h2>
+        {transferStats.total > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Левая часть — цифры */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-text-light">Всего операций</span>
+                <span className="font-bold text-text text-lg">{transferStats.total}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-text-light">📦 Переносов</span>
+                <span className="font-semibold text-blue-600">{transferStats.moves}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-text-light">📋 Дублей</span>
+                <span className="font-semibold text-green-600">{transferStats.duplicates}</span>
+              </div>
+              <div className="border-t border-border pt-3 mt-3">
+                <p className="text-xs text-text-light mb-2 font-medium">По причинам:</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-text-light">🔄 Рутинная задача</span>
+                    <span className="font-semibold text-text">{transferStats.byReason.routine}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-text-light">⏰ Не успел</span>
+                    <span className="font-semibold text-text">{transferStats.byReason.notFinished}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-text-light">📝 Другое</span>
+                    <span className="font-semibold text-text">{transferStats.byReason.other}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Правая часть — PieChart причин */}
+            {transferPieData.length > 0 && (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={transferPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={65}
+                    dataKey="value"
+                    label={coloredLabel}
+                  >
+                    {transferPieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        ) : (
+          <p className="text-text-light text-center py-8">
+            Пока нет переносов. Используйте 📦 в списке задач Ежедневника.
+          </p>
+        )}
       </div>
 
       {/* === ИНСТРУМЕНТЫ === */}
