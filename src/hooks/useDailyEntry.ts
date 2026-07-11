@@ -230,6 +230,41 @@ export function useDailyEntry(selectedDate: string) {
     }
   }, [])
 
+// Восстановить удалённую задачу
+  const restoreTask = useCallback(async (taskData: {
+    title: string
+    status: TaskStatus
+    priority: TaskPriority
+    tag?: TaskTag
+    subtasks: SubTaskItem[]
+  }) => {
+    try {
+      const now = new Date().toISOString()
+      const newTask: Task = {
+        title: taskData.title,
+        date: selectedDate,
+        status: taskData.status,
+        priority: taskData.priority,
+        tag: taskData.tag,
+        subtasks: taskData.subtasks || [],
+        order: tasks.length,
+        createdAt: now,
+        updatedAt: now,
+      }
+      const id = await db.tasks.add(newTask)
+      setTasks(prev => [...prev, {
+        id: id as number,
+        title: taskData.title,
+        status: taskData.status,
+        priority: taskData.priority,
+        tag: taskData.tag,
+        subtasks: taskData.subtasks || [],
+      }])
+    } catch (error) {
+      console.error('Ошибка восстановления задачи:', error)
+    }
+  }, [selectedDate, tasks.length])
+
   // Добавить подзадачу
   const addSubtask = useCallback(async (taskId: number, title: string) => {
     try {
@@ -325,6 +360,7 @@ export function useDailyEntry(selectedDate: string) {
     updateTaskPriority,
     updateTaskTag,
     deleteTask,
+    restoreTask,
     addSubtask,
     toggleSubtask,
     deleteSubtask,

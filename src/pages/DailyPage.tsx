@@ -38,6 +38,7 @@ export default function DailyPage() {
     updateTaskPriority,
     updateTaskTag,
     deleteTask,
+    restoreTask,
     addSubtask,
     toggleSubtask,
     deleteSubtask,
@@ -236,6 +237,7 @@ export default function DailyPage() {
           onUpdatePriority={updateTaskPriority}
           onUpdateTag={updateTaskTag}
           onDelete={deleteTask}
+          onRestoreTask={restoreTask}
           onAddSubtask={addSubtask}
           onToggleSubtask={toggleSubtask}
           onDeleteSubtask={deleteSubtask}

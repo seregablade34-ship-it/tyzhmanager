@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { TaskItem } from '../hooks/useDailyEntry'
-import type { TaskStatus, TaskPriority, TaskTag, TransferReason } from '../types'
+import type { TaskStatus, TaskPriority, TaskTag, TransferReason, SubTask } from '../types'
 import TaskTransferModal from './TaskTransferModal'
 
 interface ImportGoal {
@@ -11,12 +11,19 @@ interface ImportGoal {
 
 interface TaskListProps {
   tasks: TaskItem[]
-  currentDate: string // YYYY-MM-DD — нужен для переноса
+  currentDate: string
   onAdd: (title: string) => void
   onUpdateStatus: (taskId: number, status: TaskStatus) => void
   onUpdatePriority: (taskId: number, priority: TaskPriority) => void
   onUpdateTag: (taskId: number, tag: TaskTag | undefined) => void
   onDelete: (taskId: number) => void
+  onRestoreTask?: (taskData: {
+    title: string
+    status: TaskStatus
+    priority: TaskPriority
+    tag?: TaskTag
+    subtasks: SubTask[]
+  }) => void
   onAddSubtask: (taskId: number, title: string) => void
   onToggleSubtask: (taskId: number, subtaskId: string) => void
   onDeleteSubtask: (taskId: number, subtaskId: string) => void
@@ -54,7 +61,7 @@ const STATUS_ORDER: TaskStatus[] = ['not-started', 'planned', 'in-progress', 'do
 
 export default function TaskList({
   tasks, currentDate, onAdd, onUpdateStatus, onUpdatePriority, onUpdateTag,
-  onDelete, onAddSubtask, onToggleSubtask, onDeleteSubtask,
+  onDelete, onRestoreTask, onAddSubtask, onToggleSubtask, onDeleteSubtask,
   onTransferTask, importGoals,
 }: TaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -62,9 +69,42 @@ export default function TaskList({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
   const [showImport, setShowImport] = useState(false)
   const [statusDropdown, setStatusDropdown] = useState<number | null>(null)
-  // Перенос
   const [transferTaskId, setTransferTaskId] = useState<number | null>(null)
   const [transferTaskTitle, setTransferTaskTitle] = useState('')
+
+  // Undo-toast
+  const [deletedTaskData, setDeletedTaskData] = useState<TaskItem | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    }
+  }, [])
+
+  function handleDeleteWithUndo(task: TaskItem) {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    setDeletedTaskData(task)
+    onDelete(task.id)
+    undoTimerRef.current = setTimeout(() => {
+      setDeletedTaskData(null)
+      undoTimerRef.current = null
+    }, 5000)
+  }
+
+  function handleUndo() {
+    if (!deletedTaskData || !onRestoreTask) return
+    onRestoreTask({
+      title: deletedTaskData.title,
+      status: deletedTaskData.status,
+      priority: deletedTaskData.priority,
+      tag: deletedTaskData.tag,
+      subtasks: deletedTaskData.subtasks || [],
+    })
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    setDeletedTaskData(null)
+    undoTimerRef.current = null
+  }
 
   function handleAdd() {
     const trimmed = newTaskTitle.trim()
@@ -129,7 +169,6 @@ export default function TaskList({
                      placeholder-text-light/50 focus:outline-none focus:ring-2
                      focus:ring-primary/30 focus:border-primary transition-colors"
         />
-        {/* Кнопка импорта из целей */}
         {importGoals && importGoals.length > 0 && (
           <button
             onClick={() => setShowImport(!showImport)}
@@ -215,7 +254,6 @@ export default function TaskList({
                       {statusCfg.icon}
                     </button>
 
-                    {/* Выпадающий список статусов */}
                     {isDropdownOpen && (
                       <>
                         <div
@@ -289,7 +327,7 @@ export default function TaskList({
 
                   {/* Удалить */}
                   <button
-                    onClick={() => onDelete(task.id)}
+                    onClick={() => handleDeleteWithUndo(task)}
                     className="text-text-light hover:text-danger transition-colors cursor-pointer text-sm"
                   >
                     ✕
@@ -299,7 +337,6 @@ export default function TaskList({
                 {/* Раскрытая панель */}
                 {isExpanded && (
                   <div className="px-3 pb-3 pt-1 bg-bg/50 border-t border-border">
-                    {/* Перенос/дубль кнопки в раскрытой панели */}
                     {onTransferTask && (
                       <div className="mb-3">
                         <p className="text-xs text-text-light mb-1">Действия:</p>
@@ -313,7 +350,6 @@ export default function TaskList({
                       </div>
                     )}
 
-                    {/* Управление статусом */}
                     <div className="mb-3">
                       <p className="text-xs text-text-light mb-1">Статус:</p>
                       <div className="flex gap-1 flex-wrap">
@@ -333,7 +369,6 @@ export default function TaskList({
                       </div>
                     </div>
 
-                    {/* Управление приоритетом */}
                     <div className="mb-3">
                       <p className="text-xs text-text-light mb-1">Приоритет:</p>
                       <div className="flex gap-1">
@@ -353,7 +388,6 @@ export default function TaskList({
                       </div>
                     </div>
 
-                    {/* Управление тегом */}
                     <div className="mb-3">
                       <p className="text-xs text-text-light mb-1">Тег:</p>
                       <div className="flex gap-1 flex-wrap">
@@ -383,7 +417,6 @@ export default function TaskList({
                       </div>
                     </div>
 
-                    {/* Подзадачи */}
                     <div>
                       <p className="text-xs text-text-light mb-1">Подзадачи:</p>
                       {subtasks.length > 0 && (
@@ -448,6 +481,26 @@ export default function TaskList({
               style={{ width: `${progressPercent}%` }}
             />
           </div>
+        </div>
+      )}
+
+      {/* Undo-toast — ЗДЕСЬ, вне списка задач! */}
+      {deletedTaskData && onRestoreTask && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+                        bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl
+                        flex items-center gap-4">
+          <span className="text-sm">
+            🗑️ Задача «{deletedTaskData.title.length > 20
+              ? deletedTaskData.title.slice(0, 20) + '…'
+              : deletedTaskData.title}» удалена
+          </span>
+          <button
+            onClick={handleUndo}
+            className="px-3 py-1 bg-primary text-white rounded-lg text-sm font-bold
+                       hover:bg-primary-dark transition-colors cursor-pointer"
+          >
+            ↩ Вернуть
+          </button>
         </div>
       )}
 
