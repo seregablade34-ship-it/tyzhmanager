@@ -29,15 +29,33 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Регистрация Service Worker -->
+   <!-- Регистрация Service Worker с авто-обновлением -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        window.addEventListener('load', function() {
           navigator.serviceWorker.register('/sw.js')
-            .then((reg) => {
+            .then(function(reg) {
               console.log('✅ SW registered:', reg.scope)
+              
+              // Проверяем обновления каждые 60 секунд
+              setInterval(function() {
+                reg.update()
+              }, 60000)
+
+              // Когда новый SW готов — активируем сразу
+              reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', function() {
+                    if (newWorker.state === 'activated') {
+                      console.log('🔄 Новая версия активирована!')
+                      window.location.reload()
+                    }
+                  })
+                }
+              })
             })
-            .catch((err) => {
+            .catch(function(err) {
               console.log('❌ SW registration failed:', err)
             })
         })
