@@ -183,6 +183,44 @@ export default function InstructionPage() {
         </div>
       </Section>
 
+{/* ══════ ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ ══════ */}
+      <Section icon="🔄" title="Как обновить приложение">
+        <p className="text-text-light text-sm mb-3">
+          Приложение обновляется автоматически. Но если вы видите «Загрузка...»
+          или старую версию — выполните ручное обновление.
+        </p>
+
+        <div className="space-y-2">
+          <h3 className="font-semibold text-text">📱 На телефоне (Android / iPhone)</h3>
+          <ol className="list-decimal list-inside space-y-1.5 text-text ml-2 text-sm">
+            <li>Закройте приложение полностью (смахните из списка запущенных)</li>
+            <li>Откройте <strong>браузер</strong> (Chrome / Safari)</li>
+            <li>Перейдите в <strong>Настройки браузера</strong> → <strong>Конфиденциальность</strong></li>
+            <li>Нажмите <strong>«Очистить данные»</strong> → выберите <strong>«Кэш»</strong></li>
+            <li>Откройте приложение заново — загрузится новая версия</li>
+          </ol>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="font-semibold text-text">💻 На компьютере</h3>
+          <ol className="list-decimal list-inside space-y-1.5 text-text ml-2 text-sm">
+            <li>Откройте приложение в браузере</li>
+            <li>Нажмите <strong>Ctrl + Shift + R</strong> (жёсткая перезагрузка)</li>
+            <li>Если не помогло: нажмите <strong>F12</strong> → вкладка <strong>Application</strong></li>
+            <li>В разделе <strong>Storage</strong> нажмите <strong>«Clear site data»</strong></li>
+            <li>Перезагрузите страницу — <strong>F5</strong></li>
+          </ol>
+        </div>
+
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-3 mt-2">
+          <p className="text-sm text-text">
+            💡 <strong>Важно:</strong> очистка кэша <strong>НЕ удаляет</strong> ваши
+            данные (задачи, цели, стратегии). Данные хранятся отдельно в IndexedDB
+            и останутся на месте.
+          </p>
+        </div>
+      </Section>
+
       {/* ══════ РАЗДЕЛЫ ══════ */}
       <Section icon="📅" title="Ежедневник">
         <p className="text-text-light text-sm leading-relaxed">
@@ -213,7 +251,7 @@ export default function InstructionPage() {
         <p className="text-text-light text-sm leading-relaxed">
           Набор инструментов для принятия решений: Квадрат Декарта
           (стоит ли делать?), Матрица Эйзенхауэра (срочно/важно),
-          Метод 3П (приоритет цели), Мини-самокоучинг (10 вопросов
+          Метод 3П (Авторская методика для определения приоритета цели), Мини-самокоучинг (Авторская подход, через 10 вопросов
           для глубокой проработки цели).
         </p>
       </Section>
