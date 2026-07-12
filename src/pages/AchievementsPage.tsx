@@ -3,22 +3,26 @@ import { useAchievements, ACHIEVEMENTS, type AchievementDef } from '../hooks/use
 import { useCombo } from '../hooks/useCombo'
 
 const ALL_RANKS = [
-  { level: 1, title: 'Новичок',       icon: '🌱', minXp: 0 },
-  { level: 2, title: 'Практик',       icon: '📝', minXp: 50 },
-  { level: 3, title: 'Планировщик',   icon: '📋', minXp: 150 },
-  { level: 4, title: 'Стратег',       icon: '🎯', minXp: 300 },
-  { level: 5, title: 'Профессионал',  icon: '💼', minXp: 500 },
-  { level: 6, title: 'Эксперт',       icon: '🏆', minXp: 800 },
-  { level: 7, title: 'Мастер целей',  icon: '👑', minXp: 1200 },
-  { level: 8, title: 'Легенда',       icon: '💎', minXp: 2000 },
+  { level: 1,  title: 'Новичок',       icon: '🌱', minXp: 0 },
+  { level: 2,  title: 'Практик',       icon: '📝', minXp: 30 },
+  { level: 3,  title: 'Планировщик',   icon: '📋', minXp: 80 },
+  { level: 4,  title: 'Стратег',       icon: '🎯', minXp: 160 },
+  { level: 5,  title: 'Профессионал',  icon: '💼', minXp: 300 },
+  { level: 6,  title: 'Эксперт',       icon: '🏆', minXp: 500 },
+  { level: 7,  title: 'Мастер',        icon: '⚡', minXp: 800 },
+  { level: 8,  title: 'Грандмастер',   icon: '👑', minXp: 1200 },
+  { level: 9,  title: 'Легенда',       icon: '💎', minXp: 2000 },
+  { level: 10, title: 'Титан',         icon: '🌍', minXp: 3500 },
 ]
 
 const CATEGORIES: { key: string; title: string; icon: string }[] = [
-  { key: 'combo',   title: 'Комбо',       icon: '🔥' },
-  { key: 'goals',   title: 'Цели',        icon: '🎯' },
-  { key: 'daily',   title: 'Ежедневник',  icon: '📝' },
-  { key: 'tools',   title: 'Инструменты', icon: '🛠️' },
-  { key: 'special', title: 'Особые',      icon: '⭐' },
+  { key: 'combo',   title: 'Комбо',          icon: '🔥' },
+  { key: 'goals',   title: 'Цели',           icon: '🎯' },
+  { key: 'daily',   title: 'Ежедневник',     icon: '📝' },
+  { key: 'perfect', title: 'Идеальный день', icon: '✨' },
+  { key: 'tools',   title: 'Инструменты',    icon: '🛠️' },
+  { key: 'special', title: 'Особые',         icon: '⭐' },
+  { key: 'secret',  title: 'Секретное',      icon: '🔮' },
 ]
 
 export default function AchievementsPage() {
@@ -32,7 +36,6 @@ export default function AchievementsPage() {
   } = useAchievements()
   const { currentCombo, maxCombo } = useCombo()
 
-  // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: вызываем checkAll при открытии страницы!
   useEffect(() => {
     if (!isLoading) {
       checkAll(currentCombo)
@@ -49,7 +52,7 @@ export default function AchievementsPage() {
 
   const unlockedIds = new Set(unlocked.map((a: { id: string }) => a.id))
   const unlockedCount = unlocked.length
-  const totalCount = ACHIEVEMENTS.length
+  const totalCount = ACHIEVEMENTS.filter(a => a.category !== 'secret').length
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -148,9 +151,13 @@ export default function AchievementsPage() {
                   <div
                     key={badge.id}
                     className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      isUnlocked
-                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
-                        : 'bg-bg border-border opacity-50'
+                      isUnlocked && badge.category === 'secret'
+                        ? 'bg-gradient-to-r from-yellow-100 via-amber-50 to-orange-100 border-yellow-400 shadow-lg ring-2 ring-yellow-300/50'
+                        : isUnlocked
+                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+                          : badge.category === 'secret'
+                            ? 'bg-gradient-to-r from-purple-50/50 to-indigo-50/50 border-purple-200/50 opacity-70'
+                            : 'bg-bg border-border opacity-50'
                     }`}
                   >
                     <span className="text-3xl">
@@ -158,9 +165,15 @@ export default function AchievementsPage() {
                     </span>
                     <div className="flex-1">
                       <p className={`font-medium ${isUnlocked ? 'text-text' : 'text-text-light'}`}>
-                        {badge.title}
+                        {badge.category === 'secret' && !isUnlocked
+                          ? '???'
+                          : badge.title}
                       </p>
-                      <p className="text-xs text-text-light">{badge.description}</p>
+                      <p className="text-xs text-text-light">
+                        {badge.category === 'secret' && !isUnlocked
+                          ? '???'
+                          : badge.description}
+                      </p>
                       {isUnlocked && unlockedData?.unlockedAt && (
                         <p className="text-xs text-success mt-1">
                           ✅ Получено: {new Date(unlockedData.unlockedAt).toLocaleDateString('ru-RU')}
@@ -168,7 +181,9 @@ export default function AchievementsPage() {
                       )}
                     </div>
                     <span className="text-xs font-medium text-primary">
-                      +{badge.xp} XP
+                      {badge.category === 'secret'
+                        ? '🔮'
+                        : `+${badge.xp} XP`}
                     </span>
                   </div>
                 )

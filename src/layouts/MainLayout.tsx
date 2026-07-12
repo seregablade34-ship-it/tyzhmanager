@@ -1,3 +1,4 @@
+import WelcomeModal from '../components/WelcomeModal'
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
@@ -15,7 +16,8 @@ export default function MainLayout() {
   }, [location.pathname])
 
   return (
-    <div className="flex min-h-screen bg-bg">
+    <div className="...">
+      <WelcomeModal />
 
       {/* ===== МОБИЛЬНЫЙ ХЕДЕР (виден только на экранах < 768px) ===== */}
       <header className="fixed top-0 left-0 right-0 z-30 flex items-center h-14 px-4 bg-surface border-b border-border md:hidden">
