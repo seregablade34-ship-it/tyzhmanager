@@ -21,6 +21,17 @@ const PERIOD_DAYS: Record<Period, number | null> = {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316']
 const STATUS_COLORS = { active: '#3b82f6', completed: '#10b981', cancelled: '#ef4444' }
 
+// ─── Конфигурация тегов (для статистики) ───
+const TAG_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
+  'focus':    { label: 'Фокус',    icon: '🎯', color: '#ef4444' },
+  'goal':     { label: 'Цель',     icon: '⭐', color: '#f59e0b' },
+  'control':  { label: 'Контроль', icon: '📊', color: '#3b82f6' },
+  'routine':  { label: 'Рутина',   icon: '🔁', color: '#6b7280' },
+  'personal': { label: 'Личное',   icon: '💜', color: '#8b5cf6' },
+  'meeting':  { label: 'Встреча',  icon: '🤝', color: '#10b981' },
+  'letter':   { label: 'Письмо',   icon: '✉️', color: '#06b6d4' },
+}
+
 // ─── Подсказки для блоков ───
 const HINTS: Record<string, string> = {
   energy: 'Средний уровень энергии за выбранный период. Заполняется в Ежедневнике через шкалу 0-10.',
@@ -29,6 +40,8 @@ const HINTS: Record<string, string> = {
   goals: 'Общее количество целей на год. Актив — в работе, достиг — завершённые.',
   energyChart: 'График изменения вашей энергии по дням. Помогает видеть тренды и закономерности.',
   tasksChart: 'Зелёные столбцы — выполненные задачи, серые — общее количество за каждый день.',
+  tagsPie: 'Распределение задач по тегам. Показывает на что уходит больше всего задач.',
+  timeByTag: 'Сколько времени (в часах) запланировано на каждый тег за выбранный период.',
   strategyPie: 'Статусы стратегических целей на 5 лет: в работе, достигнуто или не выполнено.',
   goalsPie: 'Статусы годовых целей: в работе, достигнуто или отменено.',
   spheres: 'Распределение целей по сферам жизни. Показывает баланс между разными направлениями.',
@@ -37,6 +50,15 @@ const HINTS: Record<string, string> = {
   achievements: 'Ваш прогресс в системе достижений: открытые бейджи, XP и текущий ранг.',
   tools: 'Сколько раз вы использовали каждый инструмент: PP SMART, каскад, Декарт и другие.',
   transfers: 'Статистика переносов и дублирований задач: сколько раз, по каким причинам.',
+}
+
+// ─── Форматирование минут ───
+function formatMinutes(mins: number): string {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (h > 0 && m > 0) return `${h}ч ${m}м`
+  if (h > 0) return `${h}ч`
+  return `${m}м`
 }
 
 // ─── Компонент подсказки ───
@@ -193,21 +215,61 @@ export default function StatsPage() {
       .map(([date, val]) => ({ date: date.slice(5), done: val.done, total: val.total }))
   }, [filteredTasks])
 
-  // ─── 8. Стратегия PieChart ───
+  // ─── 8. Задачи по тегам (PieChart) ───
+  const tagsPieData = useMemo(() => {
+    const map: Record<string, number> = {}
+    filteredTasks.forEach((t: any) => {
+      const tag = t.tag || 'none'
+      map[tag] = (map[tag] || 0) + 1
+    })
+    return Object.entries(map).map(([tag, count]) => {
+      const cfg = TAG_CONFIG[tag]
+      return {
+        name: cfg ? `${cfg.icon} ${cfg.label}` : '📌 Без тега',
+        value: count,
+        color: cfg ? cfg.color : '#9ca3af',
+      }
+    })
+  }, [filteredTasks])
+
+  // ─── 9. Время по тегам (BarChart) ───
+  const timeByTagData = useMemo(() => {
+    const map: Record<string, { total: number; done: number }> = {}
+    filteredTasks.forEach((t: any) => {
+      const tag = t.tag || 'none'
+      if (!map[tag]) map[tag] = { total: 0, done: 0 }
+      const dur = t.duration ?? 60
+      map[tag].total += dur
+      if (t.status === 'done') map[tag].done += dur
+    })
+    return Object.entries(map)
+      .sort((a, b) => b[1].total - a[1].total)
+      .map(([tag, val]) => {
+        const cfg = TAG_CONFIG[tag]
+        return {
+          name: cfg ? cfg.label : 'Без тега',
+          total: Math.round(val.total / 60 * 10) / 10,
+          done: Math.round(val.done / 60 * 10) / 10,
+          color: cfg ? cfg.color : '#9ca3af',
+        }
+      })
+  }, [filteredTasks])
+
+  // ─── 10. Стратегия PieChart ───
   const strategyPieData = [
     { name: 'В работе', value: stratActive, color: STATUS_COLORS.active },
     { name: 'Достигнуто', value: stratCompleted, color: STATUS_COLORS.completed },
     { name: 'Не выполнено', value: stratCancelled, color: STATUS_COLORS.cancelled },
   ].filter(d => d.value > 0)
 
-  // ─── 9. Цели на год PieChart ───
+  // ─── 11. Цели на год PieChart ───
   const goalsPieData = [
     { name: 'В работе', value: goalsActive, color: STATUS_COLORS.active },
     { name: 'Достигнуто', value: goalsCompleted, color: STATUS_COLORS.completed },
     { name: 'Отменено', value: goalsCancelled, color: STATUS_COLORS.cancelled },
   ].filter(d => d.value > 0)
 
-  // ─── 10. Сферы жизни (PieChart) ───
+  // ─── 12. Сферы жизни (PieChart) ───
   const spherePieData = useMemo(() => {
     const map: Record<string, number> = {}
     strategies.forEach((s: any) => {
@@ -221,7 +283,7 @@ export default function StatsPage() {
     return Object.entries(map).map(([name, value]) => ({ name, value }))
   }, [goals, strategies])
 
-  // ─── 11. Тепловая карта ───
+  // ─── 13. Тепловая карта ───
   const heatmapData = useMemo(() => {
     const map: Record<string, boolean> = {}
     dailyEntries.forEach((e: any) => { map[e.date] = true })
@@ -236,7 +298,7 @@ export default function StatsPage() {
     return cells
   }, [dailyEntries])
 
-  // ─── 12. Продуктивность ───
+  // ─── 14. Продуктивность ───
   const productivity = useMemo(() => {
     const daysWithTasks = new Set(filteredTasks.map((t: any) => t.date)).size
     const avgPerDay = daysWithTasks > 0 ? Math.round((tasksDone / daysWithTasks) * 10) / 10 : 0
@@ -246,14 +308,22 @@ export default function StatsPage() {
       dayMap[dayName] = (dayMap[dayName] || 0) + 1
     })
     const bestDay = Object.entries(dayMap).sort((a, b) => b[1] - a[1])[0]
+
+    // Суммарное время
+    const totalMinutes = filteredTasks.reduce((sum: number, t: any) => sum + (t.duration ?? 60), 0)
+    const doneMinutes = filteredTasks.filter((t: any) => t.status === 'done')
+      .reduce((sum: number, t: any) => sum + (t.duration ?? 60), 0)
+
     return {
       avgPerDay,
       percent: tasksPercent,
       bestDay: bestDay ? bestDay[0] : '—',
+      totalTime: formatMinutes(totalMinutes),
+      doneTime: formatMinutes(doneMinutes),
     }
   }, [filteredTasks, tasksDone, tasksPercent])
 
-  // ─── 13. Статистика переносов ───
+  // ─── 15. Статистика переносов ───
   const transferStats = useMemo(() => {
     const moves = taskTransfers.filter((t: any) => t.type === 'move').length
     const duplicates = taskTransfers.filter((t: any) => t.type === 'duplicate').length
@@ -390,6 +460,67 @@ export default function StatsPage() {
         ) : (
           <p className="text-text-light text-center py-8">Нет данных за выбранный период</p>
         )}
+      </div>
+
+      {/* === 🏷️ ЗАДАЧИ ПО ТЕГАМ + ⏱ ВРЕМЯ ПО ТЕГАМ === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Задачи по тегам */}
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <h2 className="text-lg font-semibold text-text mb-4">
+            🏷️ Задачи по тегам
+            <HintButton hintKey="tagsPie" />
+          </h2>
+          {tagsPieData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={tagsPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={70}
+                  dataKey="value"
+                  label={coloredLabel}
+                >
+                  {tagsPieData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-text-light text-center py-8">Нет задач за выбранный период</p>
+          )}
+        </div>
+
+        {/* Время по тегам */}
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <h2 className="text-lg font-semibold text-text mb-4">
+            ⏱ Время по тегам (часы)
+            <HintButton hintKey="timeByTag" />
+          </h2>
+          {timeByTagData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={timeByTagData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis type="number" tick={{ fontSize: 12 }} stroke="#9ca3af" unit="ч" />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#9ca3af" width={80} />
+                  <Tooltip formatter={(val) => `${val}ч`} />
+                  <Bar dataKey="done" fill="#10b981" name="Выполнено" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="total" fill="#e5e7eb" name="Запланировано" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="flex items-center gap-4 mt-2 text-xs text-text-light justify-center">
+                <span>🟢 Выполнено: {productivity.doneTime}</span>
+                <span>⬜ Всего: {productivity.totalTime}</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-text-light text-center py-8">Нет задач за выбранный период</p>
+          )}
+        </div>
       </div>
 
       {/* === СТРАТЕГИЯ + ГОДОВЫЕ ЦЕЛИ (2 PieChart) === */}
@@ -534,6 +665,16 @@ export default function StatsPage() {
               <span className="text-text-light">Лучший день</span>
               <span className="font-semibold text-text capitalize">{productivity.bestDay}</span>
             </div>
+            <div className="border-t border-border pt-3 mt-1">
+              <div className="flex justify-between">
+                <span className="text-text-light">⏱ Выполнено</span>
+                <span className="font-semibold text-green-600">{productivity.doneTime}</span>
+              </div>
+              <div className="flex justify-between mt-2">
+                <span className="text-text-light">⏱ Запланировано</span>
+                <span className="font-semibold text-text">{productivity.totalTime}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -573,7 +714,6 @@ export default function StatsPage() {
         </h2>
         {transferStats.total > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Левая часть — цифры */}
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-text-light">Всего операций</span>
@@ -606,7 +746,6 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Правая часть — PieChart причин */}
             {transferPieData.length > 0 && (
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
