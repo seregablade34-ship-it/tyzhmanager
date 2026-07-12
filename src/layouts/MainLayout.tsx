@@ -16,7 +16,7 @@ export default function MainLayout() {
   }, [location.pathname])
 
   return (
-    <div className="...">
+    <div className="flex min-h-screen bg-bg">
       <WelcomeModal />
 
       {/* ===== МОБИЛЬНЫЙ ХЕДЕР (виден только на экранах < 768px) ===== */}
