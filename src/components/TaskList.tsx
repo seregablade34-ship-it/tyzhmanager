@@ -172,7 +172,7 @@ export default function TaskList({
       </div>
 
       {/* Добавление задачи */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 min-w-0">
         <input
           type="text"
           value={newTaskTitle}
@@ -198,8 +198,8 @@ export default function TaskList({
         )}
         <button
           onClick={handleAdd}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark
-                     transition-colors font-bold cursor-pointer"
+          className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark
+                     transition-colors font-bold cursor-pointer flex-shrink-0"
         >
           +
         </button>
@@ -276,7 +276,7 @@ export default function TaskList({
                     {isDone ? '✅' : '⬜'}
                   </button>
 
-                  <span className={`flex-1 min-w-0 break-words ${isDone ? 'line-through text-text-light' : 'text-text'}`}>
+                  <span className={`flex-1 min-w-0 break-words [overflow-wrap:break-word] [word-break:normal] ${isDone ? 'line-through text-text-light' : 'text-text'}`}>
                     {task.title}
                   </span>
 
@@ -287,7 +287,7 @@ export default function TaskList({
   </span>
 )}
 
-                  <span className="text-xs text-text-light bg-bg px-1.5 py-0.5 rounded flex-shrink-0">
+                  <span className="hidden sm:inline-flex text-xs text-text-light bg-bg px-1.5 py-0.5 rounded flex-shrink-0">
                     🕐 {formatMinutes(task.duration ?? 60)}
                   </span>
 
