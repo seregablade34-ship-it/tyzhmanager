@@ -262,7 +262,7 @@ export default function TaskList({
                     if (target.closest('button') || target.closest('input')) return
                     setExpandedTask(isExpanded ? null : task.id)
                   }}
-                  className={`flex items-center gap-2 p-3 cursor-pointer
+                  className={`flex items-center gap-1.5 p-2 sm:p-3 cursor-pointer
                     ${isDone ? 'bg-success/5' : 'hover:bg-bg'} transition-colors`}
                 >
                   <button
@@ -276,15 +276,16 @@ export default function TaskList({
                     {isDone ? '✅' : '⬜'}
                   </button>
 
-                  <span className={`flex-1 min-w-0 truncate ${isDone ? 'line-through text-text-light' : 'text-text'}`}>
+                  <span className={`flex-1 min-w-0 break-words ${isDone ? 'line-through text-text-light' : 'text-text'}`}>
                     {task.title}
                   </span>
 
                   {tagCfg && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${tagCfg.bg}`}>
-                      {tagCfg.icon} {tagCfg.label}
-                    </span>
-                  )}
+  <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${tagCfg.bg}`} title={tagCfg.label}>
+    <span className="sm:hidden">{tagCfg.icon}</span>
+    <span className="hidden sm:inline">{tagCfg.icon} {tagCfg.label}</span>
+  </span>
+)}
 
                   <span className="text-xs text-text-light bg-bg px-1.5 py-0.5 rounded flex-shrink-0">
                     🕐 {formatMinutes(task.duration ?? 60)}
@@ -297,17 +298,17 @@ export default function TaskList({
                   )}
 
                   {onTransferTask && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openTransferModal(task)
-                      }}
-                      className="text-text-light hover:text-primary transition-colors cursor-pointer text-sm flex-shrink-0"
-                      title="Перенести / дублировать"
-                    >
-                      📦
-                    </button>
-                  )}
+  <button
+    onClick={(e) => {
+      e.stopPropagation()
+      openTransferModal(task)
+    }}
+    className="hidden sm:block text-text-light hover:text-primary transition-colors cursor-pointer text-sm flex-shrink-0"
+    title="Перенести / дублировать"
+  >
+    📦
+  </button>
+)}
 
                   <span className="text-text-light text-xs select-none flex-shrink-0">
                     {isExpanded ? '▲' : '▼'}

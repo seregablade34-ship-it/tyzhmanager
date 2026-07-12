@@ -61,35 +61,61 @@ function formatMinutes(mins: number): string {
   return `${m}м`
 }
 
-// ─── Компонент подсказки ───
+/// ─── Компонент подсказки (мини-окно) ───
 function HintButton({ hintKey }: { hintKey: string }) {
   const [show, setShow] = useState(false)
   return (
-    <span className="relative inline-block ml-2">
+    <>
       <button
-        onClick={() => setShow(!show)}
+        onClick={() => setShow(true)}
         className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold
-                   hover:bg-primary/20 transition-colors cursor-pointer inline-flex items-center justify-center"
+                   hover:bg-primary/20 transition-colors cursor-pointer inline-flex items-center justify-center ml-2"
         title="Подсказка"
       >
         ?
       </button>
+
       {show && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShow(false)} />
-          <div className="absolute left-0 top-7 z-50 bg-surface border border-border rounded-lg
-                          shadow-lg p-3 text-sm text-text-light w-64 leading-relaxed">
-            {HINTS[hintKey]}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Затемнённый фон */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShow(false)}
+          />
+
+          {/* Окно подсказки */}
+          <div className="relative bg-surface border border-border rounded-2xl shadow-2xl p-5 max-w-sm w-full z-10">
+            {/* Крестик закрыть */}
             <button
               onClick={() => setShow(false)}
-              className="block mt-2 text-primary text-xs font-medium cursor-pointer hover:underline"
+              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-bg hover:bg-border
+                         flex items-center justify-center text-text-light hover:text-text
+                         transition-colors cursor-pointer text-sm"
             >
-              Понятно ✓
+              ✕
+            </button>
+
+            {/* Иконка + текст */}
+            <div className="flex items-start gap-3 pr-6">
+              <span className="text-2xl flex-shrink-0">💡</span>
+              <p className="text-sm text-text leading-relaxed">
+                {HINTS[hintKey]}
+              </p>
+            </div>
+
+            {/* Кнопка Продолжить */}
+            <button
+              onClick={() => setShow(false)}
+              className="mt-4 w-full py-2.5 bg-primary text-white rounded-xl
+                         font-medium text-sm hover:bg-primary-dark
+                         transition-colors cursor-pointer"
+            >
+              Продолжить →
             </button>
           </div>
-        </>
+        </div>
       )}
-    </span>
+    </>
   )
 }
 
