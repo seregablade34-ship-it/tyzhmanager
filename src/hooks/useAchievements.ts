@@ -11,7 +11,7 @@ export interface AchievementDef {
   title: string
   description: string
   xp: number
-  category: 'combo' | 'goals' | 'daily' | 'perfect' | 'tools' | 'special'
+  category: 'combo' | 'goals' | 'daily' | 'perfect' | 'tools' | 'special' | 'secret'
 }
 
 export interface UnlockedAchievement extends AchievementDef {
@@ -91,7 +91,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'tasks_1000',       icon: '🌍', title: 'Титан',               description: 'Выполнено 1000 задач',        xp: 400, category: 'special' },
   { id: 'transfer_first',   icon: '📦', title: 'Гибкий планировщик',  description: 'Первый перенос задачи',       xp: 10, category: 'special' },
   { id: 'transfer_10',      icon: '📦', title: 'Адаптивный',          description: '10 переносов задач',          xp: 25, category: 'special' },
-  { id: 'early_bird',       icon: '🌅', title: 'Ранняя пташка',       description: 'Запись до 7:00 утра',         xp: 15, category: 'special' },
+ { id: 'early_bird',       icon: '🌅', title: 'Ранняя пташка',       description: 'Запись до 7:00 утра',         xp: 15, category: 'special' },
+
+  // 🏆 СЕКРЕТНОЕ — открывается при получении ВСЕХ остальных бейджей
+  { id: 'secret_tyzhmanager', icon: '🔮', title: '#тыжменеджер', description: 'Секретное достижение', xp: 0, category: 'secret' },
 ]
 
 // ==========================================
@@ -345,6 +348,13 @@ export function useAchievements() {
         return hour < 7
       })
       if (earlyEntry) await tryUnlock('early_bird')
+
+      // 🏆 СЕКРЕТНОЕ: все бейджи (кроме самого секретного) открыты
+      const allNonSecret = ACHIEVEMENTS.filter(a => a.category !== 'secret')
+      const unlockedAll = await db.achievements.toArray()
+      const unlockedIds = new Set(unlockedAll.filter(a => a.isUnlocked).map(a => a.type))
+      const allRegularUnlocked = allNonSecret.every(a => unlockedIds.has(a.id))
+      if (allRegularUnlocked) await tryUnlock('secret_tyzhmanager')
 
     } catch (error) {
       console.error('Ошибка проверки достижений:', error)
