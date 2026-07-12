@@ -10,6 +10,7 @@ export interface Strategy {
   sphere: string          // Сфера жизни (здоровье, карьера, и т.д.)
   deadline: string        // Срок (например "2030")
   status: 'active' | 'completed' | 'cancelled'  // Статус
+  yearGoals?: string[]    // Подцели по годам (до 5 штук)
   createdAt: string       // Дата создания
   updatedAt: string       // Дата обновления
   order: number           // Порядок отображения
@@ -86,9 +87,9 @@ export interface DailyEntry {
 }
 
 // --- ЗАДАЧИ (ежедневные) ---
-export type TaskStatus = 'not-started' | 'planned' | 'in-progress' | 'done'
+export type TaskStatus = 'not-started' | 'done'
 export type TaskPriority = 'high' | 'medium' | 'low'
-export type TaskTag = 'focus' | 'goal' | 'control' | 'routine' | 'personal'
+export type TaskTag = 'focus' | 'goal' | 'control' | 'routine' | 'personal' | 'meeting' | 'letter'
 
 export interface SubTask {
   id: string              // Уникальный ID (uuid-подобный)
@@ -106,6 +107,7 @@ export interface Task {
   status: TaskStatus      // 4 статуса задачи
   priority: TaskPriority  // Приоритет
   tag?: TaskTag           // Тег (необязательно)
+  duration?: number               // Время на задачу в минутах (по умолчанию 60)
   subtasks: SubTask[]     // Подзадачи (декомпозиция)
   order: number           // Порядок
   createdAt: string

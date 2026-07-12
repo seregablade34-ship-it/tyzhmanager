@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { Strategy } from '../types'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 const SPHERE_ICONS: Record<string, string> = {
   'Здоровье': '💪',
@@ -32,8 +34,18 @@ export default function StrategyCard({
   onComplete,
   onFail,
 }: StrategyCardProps) {
+  const [showYears, setShowYears] = useState(false)
+
   const icon = SPHERE_ICONS[strategy.sphere] || '🎯'
   const status = STATUS_LABELS[strategy.status] || STATUS_LABELS.active
+
+  // Подцели по годам (фильтруем пустые)
+  const yearGoals = (strategy.yearGoals || []).filter(g => g.trim())
+  const hasYearGoals = yearGoals.length > 0
+
+  // Стартовый год (из deadline минус 5, или текущий)
+  const deadlineYear = parseInt(strategy.deadline) || new Date().getFullYear() + 5
+  const startYear = deadlineYear - yearGoals.length + 1
 
   // Рамка карточки по статусу
   const borderClass =
@@ -102,6 +114,61 @@ export default function StrategyCard({
         <span>📅</span>
         <span>Горизонт: {strategy.deadline}</span>
       </div>
+
+      {/* ===== ПОДЦЕЛИ ПО ГОДАМ ===== */}
+      {hasYearGoals && (
+        <div className="mt-3">
+          <button
+            onClick={() => setShowYears(!showYears)}
+            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
+          >
+            📆 Подцели по годам ({yearGoals.length})
+            {showYears ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+
+          {showYears && (
+            <div className="mt-2 ml-1 space-y-1.5">
+              {yearGoals.map((goal, i) => {
+                const year = startYear + i
+                const currentYear = new Date().getFullYear()
+                const isCurrent = year === currentYear
+                const isPast = year < currentYear
+
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-2 p-2 rounded-lg text-sm transition-colors ${
+                      isCurrent
+                        ? 'bg-primary/10 border border-primary/20'
+                        : isPast
+                          ? 'bg-bg/50 text-text-light'
+                          : 'bg-bg/30'
+                    }`}
+                  >
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                      isCurrent
+                        ? 'bg-primary text-white'
+                        : isPast
+                          ? 'bg-gray-300 text-gray-600'
+                          : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      {year}
+                    </span>
+                    <span className={`${isPast ? 'line-through text-text-light' : 'text-text'}`}>
+                      {goal}
+                    </span>
+                    {isCurrent && (
+                      <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full ml-auto shrink-0">
+                        сейчас
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ===== КНОПКИ ВЫПОЛНЕНО / НЕ ВЫПОЛНЕНО ===== */}
       {strategy.status === 'active' && (
