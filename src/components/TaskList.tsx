@@ -172,14 +172,14 @@ export default function TaskList({
       </div>
 
       {/* Добавление задачи */}
-      <div className="flex gap-2 mb-4 min-w-0">
+      <div className="flex gap-2 mb-4 min-w-0 w-full max-w-full">
         <input
           type="text"
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Добавить задачу..."
-          className="flex-1 px-3 py-2 rounded-lg border border-border bg-bg text-text
+          className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-border bg-bg text-text
                      placeholder-text-light/50 focus:outline-none focus:ring-2
                      focus:ring-primary/30 focus:border-primary transition-colors"
         />
@@ -253,7 +253,7 @@ export default function TaskList({
             const isDone = task.status === 'done'
 
             return (
-              <div key={task.id} className={`border-l-4 ${priorityCfg.color} rounded-lg border border-border overflow-visible relative`}>
+              <div key={task.id} className={`border-l-4 ${priorityCfg.color} rounded-lg border border-border overflow-hidden relative`}>
 
                 {/* ═══ ВЕРХНЯЯ СТРОКА — клик сюда раскрывает/закрывает ═══ */}
                 <div
