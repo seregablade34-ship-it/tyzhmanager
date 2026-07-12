@@ -1,7 +1,7 @@
 // ==========================================
 // КОМПОНЕНТ: TaskTransferModal
 // Перенос / дублирование задачи на другую дату
-// С выбором причины и комментарием
+// С поддержкой дублирования на 1–7 дней
 // ==========================================
 
 import { useState } from 'react'
@@ -28,6 +28,32 @@ const REASONS: { value: TransferReason; icon: string; label: string; needsCommen
   { value: 'other',        icon: '📝', label: 'Другое',           needsComment: true },
 ]
 
+const MULTI_DAY_OPTIONS = [
+  { days: 1, label: 'Завтра' },
+  { days: 2, label: '2 дня' },
+  { days: 3, label: '3 дня' },
+  { days: 5, label: '5 дней' },
+  { days: 7, label: '7 дней' },
+]
+
+// Получить дату через N дней
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
+// Форматирование даты
+function formatDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('ru-RU', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long',
+  })
+}
+
 export default function TaskTransferModal({
   isOpen,
   onClose,
@@ -40,6 +66,7 @@ export default function TaskTransferModal({
   const [reason, setReason] = useState<TransferReason>('routine')
   const [comment, setComment] = useState('')
   const [targetDate, setTargetDate] = useState('')
+  const [multiDays, setMultiDays] = useState(0) // 0 = ручной выбор, >0 = на N дней
   const [showCalendar, setShowCalendar] = useState(false)
   const [error, setError] = useState('')
 
@@ -51,6 +78,7 @@ export default function TaskTransferModal({
     setReason('routine')
     setComment('')
     setTargetDate('')
+    setMultiDays(0)
     setError('')
     setShowCalendar(false)
   }
@@ -60,25 +88,25 @@ export default function TaskTransferModal({
     onClose()
   }
 
-  // Получить "завтра"
-  const getTomorrow = () => {
-    const d = new Date(currentDate)
-    d.setDate(d.getDate() + 1)
-    return d.toISOString().split('T')[0]
-  }
-
-  // Форматирование даты для отображения
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return ''
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('ru-RU', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'long',
-    })
-  }
+  const getTomorrow = () => addDays(currentDate, 1)
 
   const handleConfirm = () => {
+    // Дублирование на N дней
+    if (transferType === 'duplicate' && multiDays > 0) {
+      for (let i = 1; i <= multiDays; i++) {
+        const date = addDays(currentDate, i)
+        onConfirm({
+          toDate: date,
+          type: 'duplicate',
+          reason,
+          comment: comment.trim() || undefined,
+        })
+      }
+      handleClose()
+      return
+    }
+
+    // Обычный перенос/дубль на 1 дату
     if (!targetDate) {
       setError('Выберите дату')
       return
@@ -153,7 +181,7 @@ export default function TaskTransferModal({
                 </div>
                 <div>
                   <p className="font-bold text-gray-800">Дублировать</p>
-                  <p className="text-sm text-gray-500">Копия задачи появится на другом дне</p>
+                  <p className="text-sm text-gray-500">Копия задачи на один или несколько дней</p>
                 </div>
               </button>
             </div>
@@ -191,7 +219,7 @@ export default function TaskTransferModal({
                 </button>
               ))}
 
-              {/* Комментарий — для "Не успел" и "Другое" */}
+              {/* Комментарий */}
               {(reason === 'not-finished' || reason === 'other') && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-600 flex items-center gap-1">
@@ -215,7 +243,11 @@ export default function TaskTransferModal({
               )}
 
               <button
-                onClick={() => { setStep('date'); setTargetDate(getTomorrow()) }}
+                onClick={() => {
+                  setStep('date')
+                  setTargetDate(getTomorrow())
+                  setMultiDays(0)
+                }}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
               >
                 Далее — выбрать дату →
@@ -236,12 +268,65 @@ export default function TaskTransferModal({
                 <p className="text-sm font-medium text-gray-600">Выберите дату:</p>
               </div>
 
-              {/* Быстрые кнопки */}
+              {/* === ДУБЛИРОВАНИЕ: быстрые кнопки на N дней === */}
+              {transferType === 'duplicate' && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">🔄 Дублировать на несколько дней:</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {MULTI_DAY_OPTIONS.map(opt => (
+                      <button
+                        key={opt.days}
+                        onClick={() => {
+                          setMultiDays(opt.days)
+                          setTargetDate('')
+                          setError('')
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all
+                          ${multiDays === opt.days
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-gray-200 hover:border-green-300 text-gray-600'
+                          }
+                        `}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Показываем какие даты будут созданы */}
+                  {multiDays > 0 && (
+                    <div className="mt-2 bg-green-50 rounded-xl p-3">
+                      <p className="text-xs text-green-700 font-medium mb-1">
+                        📋 Задача будет создана на {multiDays} {multiDays === 1 ? 'день' : multiDays < 5 ? 'дня' : 'дней'}:
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {Array.from({ length: multiDays }, (_, i) => (
+                          <span key={i} className="text-xs bg-white px-2 py-1 rounded-lg text-green-800 border border-green-200">
+                            {formatDate(addDays(currentDate, i + 1))}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 my-2">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400">или</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                </div>
+              )}
+
+              {/* Одиночная дата */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setTargetDate(getTomorrow()); setError('') }}
+                  onClick={() => {
+                    setTargetDate(getTomorrow())
+                    setMultiDays(0)
+                    setError('')
+                  }}
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border-2 transition-all
-                    ${targetDate === getTomorrow()
+                    ${targetDate === getTomorrow() && multiDays === 0
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 hover:border-gray-300 text-gray-600'
                     }
@@ -250,15 +335,18 @@ export default function TaskTransferModal({
                   Завтра
                 </button>
                 <button
-                  onClick={() => setShowCalendar(true)}
+                  onClick={() => {
+                    setMultiDays(0)
+                    setShowCalendar(true)
+                  }}
                   className="flex-1 py-2 px-3 rounded-lg text-sm font-medium border-2 border-gray-200 hover:border-blue-400 text-gray-600 transition-all"
                 >
                   📅 Выбрать дату
                 </button>
               </div>
 
-              {/* Выбранная дата */}
-              {targetDate && (
+              {/* Выбранная дата (если одиночная) */}
+              {targetDate && multiDays === 0 && (
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-sm text-gray-500">
                     {transferType === 'move' ? 'Перенести на:' : 'Дублировать на:'}
@@ -275,6 +363,7 @@ export default function TaskTransferModal({
                   <span className="text-gray-500">Действие:</span>{' '}
                   <span className="font-medium">
                     {transferType === 'move' ? '📦 Перенос' : '📋 Дубль'}
+                    {multiDays > 0 && ` на ${multiDays} ${multiDays === 1 ? 'день' : multiDays < 5 ? 'дня' : 'дней'}`}
                   </span>
                 </p>
                 <p>
@@ -303,14 +392,22 @@ export default function TaskTransferModal({
               {/* Кнопка подтверждения */}
               <button
                 onClick={handleConfirm}
+                disabled={multiDays === 0 && !targetDate}
                 className={`w-full py-3 rounded-xl font-medium text-white transition-colors
-                  ${transferType === 'move'
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-green-600 hover:bg-green-700'
+                  ${multiDays === 0 && !targetDate
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : transferType === 'move'
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-green-600 hover:bg-green-700'
                   }
                 `}
               >
-                {transferType === 'move' ? '📦 Перенести' : '📋 Дублировать'}
+                {transferType === 'move'
+                  ? '📦 Перенести'
+                  : multiDays > 0
+                    ? `📋 Дублировать на ${multiDays} ${multiDays === 1 ? 'день' : multiDays < 5 ? 'дня' : 'дней'}`
+                    : '📋 Дублировать'
+                }
               </button>
             </div>
           )}
@@ -324,6 +421,7 @@ export default function TaskTransferModal({
         currentDate={targetDate || currentDate}
         onSelectDate={(date) => {
           setTargetDate(date)
+          setMultiDays(0)
           setError('')
         }}
       />
