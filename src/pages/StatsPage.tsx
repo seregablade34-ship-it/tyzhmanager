@@ -29,7 +29,7 @@ const TAG_CONFIG: Record<string, { label: string; icon: string; color: string }>
   'routine':  { label: 'Рутина',   icon: '🔁', color: '#6b7280' },
   'personal': { label: 'Личное',   icon: '💜', color: '#8b5cf6' },
   'meeting':  { label: 'Встреча',  icon: '🤝', color: '#10b981' },
-  'letter':   { label: 'Письмо',   icon: '✉️', color: '#06b6d4' },
+  'letter':   { label: 'Операционная', icon: '✉️', color: '#06b6d4' },
 }
 
 // ─── Подсказки для блоков ───

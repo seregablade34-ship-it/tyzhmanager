@@ -50,7 +50,7 @@ const TAG_CONFIG: Record<TaskTag, { label: string; icon: string; bg: string }> =
   'routine':  { label: 'Рутина',   icon: '🔁', bg: 'bg-gray-50 text-gray-700' },
   'personal': { label: 'Личное',   icon: '💜', bg: 'bg-purple-50 text-purple-700' },
   'meeting':  { label: 'Встреча',  icon: '🤝', bg: 'bg-green-50 text-green-700' },
-  'letter':   { label: 'Письмо',   icon: '✉️', bg: 'bg-sky-50 text-sky-700' },
+  'letter':   { label: 'Операционная', icon: '✉️', bg: 'bg-sky-50 text-sky-700' },
 }
 
 const DURATION_OPTIONS = [
