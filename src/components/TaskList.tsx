@@ -16,6 +16,7 @@ interface TaskListProps {
   onUpdateStatus: (taskId: number, status: TaskStatus) => void
   onUpdatePriority: (taskId: number, priority: TaskPriority) => void
   onUpdateTag: (taskId: number, tag: TaskTag | undefined) => void
+  onUpdateDuration?: (taskId: number, duration: number) => void
   onDelete: (taskId: number) => void
   onRestoreTask?: (taskData: {
     title: string
@@ -36,13 +37,6 @@ interface TaskListProps {
   importGoals?: ImportGoal[]
 }
 
-const STATUS_CONFIG: Record<TaskStatus, { label: string; icon: string; color: string }> = {
-  'not-started': { label: 'Не начато', icon: '⬜', color: 'text-text-light' },
-  'planned':     { label: 'Запланировано', icon: '📋', color: 'text-blue-500' },
-  'in-progress': { label: 'В процессе', icon: '🔄', color: 'text-warning' },
-  'done':        { label: 'Готово', icon: '✅', color: 'text-success' },
-}
-
 const PRIORITY_CONFIG: Record<TaskPriority, { label: string; icon: string; color: string }> = {
   'high':   { label: 'Высокий', icon: '🔴', color: 'border-l-danger' },
   'medium': { label: 'Средний', icon: '🟡', color: 'border-l-warning' },
@@ -50,29 +44,46 @@ const PRIORITY_CONFIG: Record<TaskPriority, { label: string; icon: string; color
 }
 
 const TAG_CONFIG: Record<TaskTag, { label: string; icon: string; bg: string }> = {
-  'focus':    { label: 'Фокус', icon: '🎯', bg: 'bg-red-50 text-red-700' },
-  'goal':     { label: 'Цель', icon: '⭐', bg: 'bg-amber-50 text-amber-700' },
+  'focus':    { label: 'Фокус',    icon: '🎯', bg: 'bg-red-50 text-red-700' },
+  'goal':     { label: 'Цель',     icon: '⭐', bg: 'bg-amber-50 text-amber-700' },
   'control':  { label: 'Контроль', icon: '📊', bg: 'bg-blue-50 text-blue-700' },
-  'routine':  { label: 'Рутина', icon: '🔁', bg: 'bg-gray-50 text-gray-700' },
-  'personal': { label: 'Личное', icon: '💜', bg: 'bg-purple-50 text-purple-700' },
+  'routine':  { label: 'Рутина',   icon: '🔁', bg: 'bg-gray-50 text-gray-700' },
+  'personal': { label: 'Личное',   icon: '💜', bg: 'bg-purple-50 text-purple-700' },
+  'meeting':  { label: 'Встреча',  icon: '🤝', bg: 'bg-green-50 text-green-700' },
+  'letter':   { label: 'Письмо',   icon: '✉️', bg: 'bg-sky-50 text-sky-700' },
 }
 
-const STATUS_ORDER: TaskStatus[] = ['not-started', 'planned', 'in-progress', 'done']
+const DURATION_OPTIONS = [
+  { value: 15,  label: '15м' },
+  { value: 30,  label: '30м' },
+  { value: 45,  label: '45м' },
+  { value: 60,  label: '1ч' },
+  { value: 90,  label: '1.5ч' },
+  { value: 120, label: '2ч' },
+  { value: 180, label: '3ч' },
+  { value: 240, label: '4ч' },
+]
+
+function formatMinutes(mins: number): string {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (h > 0 && m > 0) return `${h}ч ${m}м`
+  if (h > 0) return `${h}ч`
+  return `${m}м`
+}
 
 export default function TaskList({
   tasks, currentDate, onAdd, onUpdateStatus, onUpdatePriority, onUpdateTag,
-  onDelete, onRestoreTask, onAddSubtask, onToggleSubtask, onDeleteSubtask,
-  onTransferTask, importGoals,
+  onUpdateDuration, onDelete, onRestoreTask, onAddSubtask, onToggleSubtask,
+  onDeleteSubtask, onTransferTask, importGoals,
 }: TaskListProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [expandedTask, setExpandedTask] = useState<number | null>(null)
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
   const [showImport, setShowImport] = useState(false)
-  const [statusDropdown, setStatusDropdown] = useState<number | null>(null)
   const [transferTaskId, setTransferTaskId] = useState<number | null>(null)
   const [transferTaskTitle, setTransferTaskTitle] = useState('')
 
-  // Undo-toast
   const [deletedTaskData, setDeletedTaskData] = useState<TaskItem | null>(null)
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -117,11 +128,6 @@ export default function TaskList({
     if (e.key === 'Enter') handleAdd()
   }
 
-  function handleStatusSelect(taskId: number, status: TaskStatus) {
-    onUpdateStatus(taskId, status)
-    setStatusDropdown(null)
-  }
-
   function handleAddSubtask(taskId: number) {
     const trimmed = newSubtaskTitle.trim()
     if (!trimmed) return
@@ -143,16 +149,24 @@ export default function TaskList({
   const totalCount = tasks.length
   const progressPercent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
 
+  const totalMinutes = tasks.reduce((sum, t) => sum + (t.duration ?? 60), 0)
+  const doneMinutes = tasks.filter(t => t.status === 'done').reduce((sum, t) => sum + (t.duration ?? 60), 0)
+
   return (
     <div className="bg-surface border border-border rounded-xl p-4">
       {/* Заголовок */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-text">✅ Задачи на день</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {totalCount > 0 && (
-            <span className="text-sm text-text-light">
-              {doneCount}/{totalCount} выполнено
-            </span>
+            <>
+              <span className="text-xs text-text-light bg-bg px-2 py-1 rounded-lg" title="Выполнено / запланировано">
+                ⏱ {formatMinutes(doneMinutes)} / {formatMinutes(totalMinutes)}
+              </span>
+              <span className="text-sm text-text-light">
+                {doneCount}/{totalCount}
+              </span>
+            </>
           )}
         </div>
       </div>
@@ -232,111 +246,89 @@ export default function TaskList({
         <div className="space-y-2">
           {tasks.map(task => {
             const subtasks = task.subtasks || []
-            const statusCfg = STATUS_CONFIG[task.status || 'not-started']
             const priorityCfg = PRIORITY_CONFIG[task.priority || 'medium']
             const tagCfg = task.tag ? TAG_CONFIG[task.tag] : null
             const isExpanded = expandedTask === task.id
             const completedSubs = subtasks.filter(s => s.isCompleted).length
-            const isDropdownOpen = statusDropdown === task.id
+            const isDone = task.status === 'done'
 
             return (
-              <div key={task.id} className={`border-l-4 ${priorityCfg.color} rounded-lg border border-border overflow-visible relative ${isDropdownOpen ? 'z-50' : 'z-0'}`}>
-                {/* Основная строка задачи */}
-                <div className={`flex items-center gap-2 p-3 ${task.status === 'done' ? 'bg-success/5' : 'hover:bg-bg'} transition-colors`}>
+              <div key={task.id} className={`border-l-4 ${priorityCfg.color} rounded-lg border border-border overflow-visible relative`}>
 
-                  {/* Кнопка статуса с DROPDOWN */}
-                  <div className="relative flex-shrink-0">
-                    <button
-                      onClick={() => setStatusDropdown(isDropdownOpen ? null : task.id)}
-                      className="cursor-pointer text-lg"
-                      title={`${statusCfg.label} → клик для выбора`}
-                    >
-                      {statusCfg.icon}
-                    </button>
+                {/* ═══ ВЕРХНЯЯ СТРОКА — клик сюда раскрывает/закрывает ═══ */}
+                <div
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement
+                    if (target.closest('button') || target.closest('input')) return
+                    setExpandedTask(isExpanded ? null : task.id)
+                  }}
+                  className={`flex items-center gap-2 p-3 cursor-pointer
+                    ${isDone ? 'bg-success/5' : 'hover:bg-bg'} transition-colors`}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onUpdateStatus(task.id, isDone ? 'not-started' : 'done')
+                    }}
+                    className="cursor-pointer text-lg flex-shrink-0"
+                    title={isDone ? 'Отменить выполнение' : 'Отметить выполненной'}
+                  >
+                    {isDone ? '✅' : '⬜'}
+                  </button>
 
-                    {isDropdownOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setStatusDropdown(null)}
-                        />
-                        <div className="absolute left-0 top-8 z-50 bg-surface border border-border
-                                        rounded-lg shadow-lg py-1 min-w-[180px]">
-                          {STATUS_ORDER.map(s => {
-                            const cfg = STATUS_CONFIG[s]
-                            const isActive = (task.status || 'not-started') === s
-                            return (
-                              <button
-                                key={s}
-                                onClick={() => handleStatusSelect(task.id, s)}
-                                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2
-                                           transition-colors cursor-pointer
-                                  ${isActive
-                                    ? 'bg-primary/10 text-primary font-semibold'
-                                    : 'text-text hover:bg-bg'
-                                  }`}
-                              >
-                                <span className="text-base">{cfg.icon}</span>
-                                <span>{cfg.label}</span>
-                                {isActive && <span className="ml-auto text-primary text-xs">✓</span>}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Название */}
-                  <span className={`flex-1 ${task.status === 'done' ? 'line-through text-text-light' : 'text-text'}`}>
+                  <span className={`flex-1 min-w-0 truncate ${isDone ? 'line-through text-text-light' : 'text-text'}`}>
                     {task.title}
                   </span>
 
-                  {/* Тег */}
                   {tagCfg && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${tagCfg.bg}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${tagCfg.bg}`}>
                       {tagCfg.icon} {tagCfg.label}
                     </span>
                   )}
 
-                  {/* Подзадачи индикатор */}
+                  <span className="text-xs text-text-light bg-bg px-1.5 py-0.5 rounded flex-shrink-0">
+                    🕐 {formatMinutes(task.duration ?? 60)}
+                  </span>
+
                   {subtasks.length > 0 && (
-                    <span className="text-xs text-text-light">
+                    <span className="text-xs text-text-light flex-shrink-0">
                       {completedSubs}/{subtasks.length}
                     </span>
                   )}
 
-                  {/* Перенос/дубль */}
                   {onTransferTask && (
                     <button
-                      onClick={() => openTransferModal(task)}
-                      className="text-text-light hover:text-primary transition-colors cursor-pointer text-sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openTransferModal(task)
+                      }}
+                      className="text-text-light hover:text-primary transition-colors cursor-pointer text-sm flex-shrink-0"
                       title="Перенести / дублировать"
                     >
                       📦
                     </button>
                   )}
 
-                  {/* Раскрыть */}
-                  <button
-                    onClick={() => setExpandedTask(isExpanded ? null : task.id)}
-                    className="text-text-light hover:text-text cursor-pointer text-sm"
-                  >
+                  <span className="text-text-light text-xs select-none flex-shrink-0">
                     {isExpanded ? '▲' : '▼'}
-                  </button>
+                  </span>
 
-                  {/* Удалить */}
                   <button
-                    onClick={() => handleDeleteWithUndo(task)}
-                    className="text-text-light hover:text-danger transition-colors cursor-pointer text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteWithUndo(task)
+                    }}
+                    className="text-text-light hover:text-danger transition-colors cursor-pointer text-sm flex-shrink-0"
                   >
                     ✕
                   </button>
                 </div>
+                {/* ═══ КОНЕЦ ВЕРХНЕЙ СТРОКИ ═══ */}
 
-                {/* Раскрытая панель */}
+                {/* ═══ РАСКРЫТАЯ ПАНЕЛЬ — клики тут НЕ закрывают задачу ═══ */}
                 {isExpanded && (
                   <div className="px-3 pb-3 pt-1 bg-bg/50 border-t border-border">
+
                     {onTransferTask && (
                       <div className="mb-3">
                         <p className="text-xs text-text-light mb-1">Действия:</p>
@@ -350,24 +342,26 @@ export default function TaskList({
                       </div>
                     )}
 
-                    <div className="mb-3">
-                      <p className="text-xs text-text-light mb-1">Статус:</p>
-                      <div className="flex gap-1 flex-wrap">
-                        {STATUS_ORDER.map(s => (
-                          <button
-                            key={s}
-                            onClick={() => onUpdateStatus(task.id, s)}
-                            className={`text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors ${
-                              task.status === s
-                                ? 'bg-primary text-white'
-                                : 'bg-bg border border-border hover:bg-surface text-text-light'
-                            }`}
-                          >
-                            {STATUS_CONFIG[s].icon} {STATUS_CONFIG[s].label}
-                          </button>
-                        ))}
+                    {onUpdateDuration && (
+                      <div className="mb-3">
+                        <p className="text-xs text-text-light mb-1">⏱ Время на задачу:</p>
+                        <div className="flex gap-1 flex-wrap">
+                          {DURATION_OPTIONS.map(d => (
+                            <button
+                              key={d.value}
+                              onClick={() => onUpdateDuration(task.id, d.value)}
+                              className={`text-xs px-2 py-1 rounded-lg cursor-pointer transition-colors ${
+                                (task.duration ?? 60) === d.value
+                                  ? 'bg-primary text-white'
+                                  : 'bg-bg border border-border hover:bg-surface text-text-light'
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="mb-3">
                       <p className="text-xs text-text-light mb-1">Приоритет:</p>
@@ -466,13 +460,14 @@ export default function TaskList({
                     </div>
                   </div>
                 )}
+                {/* ═══ КОНЕЦ РАСКРЫТОЙ ПАНЕЛИ ═══ */}
+
               </div>
             )
           })}
         </div>
       )}
 
-      {/* Прогресс-бар */}
       {totalCount > 0 && (
         <div className="mt-4">
           <div className="w-full bg-bg rounded-full h-2">
@@ -484,7 +479,6 @@ export default function TaskList({
         </div>
       )}
 
-      {/* Undo-toast — ЗДЕСЬ, вне списка задач! */}
       {deletedTaskData && onRestoreTask && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
                         bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl
@@ -504,7 +498,6 @@ export default function TaskList({
         </div>
       )}
 
-      {/* Модалка переноса */}
       <TaskTransferModal
         isOpen={transferTaskId !== null}
         onClose={() => setTransferTaskId(null)}

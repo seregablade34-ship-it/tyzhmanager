@@ -16,6 +16,7 @@ export interface TaskItem {
   status: TaskStatus
   priority: TaskPriority
   tag?: TaskTag
+  duration: number
   subtasks: SubTaskItem[]
 }
 
@@ -44,6 +45,7 @@ function dbTaskToUI(t: Task): TaskItem {
     status: t.status || 'not-started',
     priority: t.priority || 'medium',
     tag: t.tag,
+    duration: t.duration ?? 60,
     subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
   }
 }
@@ -159,6 +161,7 @@ export function useDailyEntry(selectedDate: string) {
         priority: 'medium',
         subtasks: [],
         order: tasks.length,
+        duration: 60,
         createdAt: now,
         updatedAt: now,
       }
@@ -166,8 +169,9 @@ export function useDailyEntry(selectedDate: string) {
       setTasks(prev => [...prev, {
         id: id as number,
         title,
-        status: 'not-started',
-        priority: 'medium',
+        status: 'not-started' as TaskStatus,
+        priority: 'medium' as TaskPriority,
+        duration: 60,
         subtasks: [],
       }])
     } catch (error) {
@@ -220,6 +224,21 @@ export function useDailyEntry(selectedDate: string) {
     }
   }, [])
 
+  // Сменить время на задачу
+  const updateTaskDuration = useCallback(async (taskId: number, duration: number) => {
+    try {
+      await db.tasks.update(taskId, {
+        duration,
+        updatedAt: new Date().toISOString(),
+      })
+      setTasks(prev =>
+        prev.map(t => t.id === taskId ? { ...t, duration } : t)
+      )
+    } catch (error) {
+      console.error('Ошибка смены времени:', error)
+    }
+  }, [])
+
   // Удалить задачу
   const deleteTask = useCallback(async (taskId: number) => {
     try {
@@ -230,7 +249,7 @@ export function useDailyEntry(selectedDate: string) {
     }
   }, [])
 
-// Восстановить удалённую задачу
+  // Восстановить удалённую задачу
   const restoreTask = useCallback(async (taskData: {
     title: string
     status: TaskStatus
@@ -248,6 +267,7 @@ export function useDailyEntry(selectedDate: string) {
         tag: taskData.tag,
         subtasks: taskData.subtasks || [],
         order: tasks.length,
+        duration: 60,
         createdAt: now,
         updatedAt: now,
       }
@@ -258,6 +278,7 @@ export function useDailyEntry(selectedDate: string) {
         status: taskData.status,
         priority: taskData.priority,
         tag: taskData.tag,
+        duration: 60,
         subtasks: taskData.subtasks || [],
       }])
     } catch (error) {
@@ -359,6 +380,7 @@ export function useDailyEntry(selectedDate: string) {
     updateTaskStatus,
     updateTaskPriority,
     updateTaskTag,
+    updateTaskDuration,
     deleteTask,
     restoreTask,
     addSubtask,
