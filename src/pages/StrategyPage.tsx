@@ -53,6 +53,7 @@ export default function StrategyPage() {
     description: string
     sphere: string
     deadline: string
+    yearGoals?: string[]
   }) {
     try {
       const now = new Date().toISOString()

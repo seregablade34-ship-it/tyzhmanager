@@ -112,7 +112,12 @@ export default function StrategyCard({
       {/* Горизонт */}
       <div className="mt-3 flex items-center gap-1 text-xs text-text-light">
         <span>📅</span>
-        <span>Горизонт: {strategy.deadline}</span>
+        <span>Горизонт: {/^\d{4}$/.test(strategy.deadline)
+          ? `${strategy.deadline} год`
+          : new Date(strategy.deadline).toLocaleDateString('ru-RU', {
+              day: 'numeric', month: 'long', year: 'numeric'
+            })
+        }</span>
       </div>
 
       {/* ===== ПОДЦЕЛИ ПО ГОДАМ ===== */}

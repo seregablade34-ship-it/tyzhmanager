@@ -363,7 +363,7 @@ export default function StatsPage() {
 
   const transferPieData = useMemo(() => {
     return [
-      { name: '🔄 Рутинная', value: transferStats.byReason.routine, color: '#3b82f6' },
+      { name: '🔄 Повтор', value: transferStats.byReason.routine, color: '#3b82f6' },
       { name: '⏰ Не успел', value: transferStats.byReason.notFinished, color: '#f59e0b' },
       { name: '📝 Другое', value: transferStats.byReason.other, color: '#8b5cf6' },
     ].filter(d => d.value > 0)
@@ -757,7 +757,7 @@ export default function StatsPage() {
                 <p className="text-xs text-text-light mb-2 font-medium">По причинам:</p>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-text-light">🔄 Рутинная задача</span>
+                    <span className="text-sm text-text-light">🔄 Повтор</span>
                     <span className="font-semibold text-text">{transferStats.byReason.routine}</span>
                   </div>
                   <div className="flex justify-between items-center">
