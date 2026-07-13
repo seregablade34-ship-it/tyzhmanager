@@ -23,7 +23,7 @@ interface TaskTransferModalProps {
 }
 
 const REASONS: { value: TransferReason; icon: string; label: string; needsComment: boolean }[] = [
-  { value: 'routine',      icon: '🔄', label: 'Рутинная задача',  needsComment: false },
+  { value: 'routine',      icon: '🔄', label: 'Повтор',           needsComment: false },
   { value: 'not-finished', icon: '⏰', label: 'Не успел',         needsComment: true },
   { value: 'other',        icon: '📝', label: 'Другое',           needsComment: true },
 ]

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { db } from '../db/database'
 
 // ═══════════════════════════════════════
 // 🌅 ПРИВЕТСТВЕННЫЕ ФРАЗЫ (каждый день)
@@ -95,6 +96,7 @@ export default function WelcomeModal() {
   const [message, setMessage] = useState('')
   const [isComeback, setIsComeback] = useState(false)
   const [missedDays, setMissedDays] = useState(0)
+  const [userName, setUserName] = useState('')
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0]
@@ -103,35 +105,50 @@ export default function WelcomeModal() {
     // Уже показывали сегодня — не показываем
     if (lastVisit === today) return
 
-    // Считаем пропущенные дни
-    let daysMissed = 0
-    if (lastVisit) {
-      const last = new Date(lastVisit)
-      const now = new Date(today)
-      const diffMs = now.getTime() - last.getTime()
-      daysMissed = Math.floor(diffMs / (1000 * 60 * 60 * 24)) - 1
+    // Загружаем имя пользователя из БД
+    async function loadAndShow() {
+      try {
+        const settings = await db.userSettings.toCollection().first()
+        if (settings?.userName) {
+          setUserName(settings.userName)
+        }
+      } catch {
+        // Если БД не доступна — просто без имени
+      }
+
+      // Считаем пропущенные дни
+      let daysMissed = 0
+      if (lastVisit) {
+        const last = new Date(lastVisit)
+        const now = new Date(today)
+        const diffMs = now.getTime() - last.getTime()
+        daysMissed = Math.floor(diffMs / (1000 * 60 * 60 * 24)) - 1
+      }
+
+      if (daysMissed > 0) {
+        const phraseFn = randomItem(COMEBACK_PHRASES)
+        setMessage(phraseFn(daysMissed))
+        setIsComeback(true)
+        setMissedDays(daysMissed)
+      } else {
+        setMessage(randomItem(GREETINGS))
+        setIsComeback(false)
+        setMissedDays(0)
+      }
+
+      setIsOpen(true)
+      localStorage.setItem(LS_LAST_VISIT, today)
     }
 
-    if (daysMissed > 0) {
-      // Пользователь пропускал дни — фраза возвращения
-      const phraseFn = randomItem(COMEBACK_PHRASES)
-      setMessage(phraseFn(daysMissed))
-      setIsComeback(true)
-      setMissedDays(daysMissed)
-    } else {
-      // Обычное приветствие
-      setMessage(randomItem(GREETINGS))
-      setIsComeback(false)
-      setMissedDays(0)
-    }
-
-    setIsOpen(true)
-
-    // Запоминаем дату визита
-    localStorage.setItem(LS_LAST_VISIT, today)
+    loadAndShow()
   }, [])
 
   if (!isOpen) return null
+
+  // Формируем приветствие с именем
+  const greetingText = isComeback
+    ? `С возвращением${userName ? `, ${userName}` : ''}! ${missedDays} ${daysWord(missedDays)} друг без друга`
+    : `👋 Приветствую${userName ? `, ${userName}` : ''}!`
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -142,15 +159,10 @@ export default function WelcomeModal() {
             : 'border-primary'
         }`}
       >
-        {/* Эмоджи-заголовок */}
+        {/* Заголовок — БЕЗ большого emoji */}
         <div className="text-center mb-4">
-          <span className="text-5xl block mb-2">
-            {isComeback ? '🫣' : '👋'}
-          </span>
           <h2 className={`text-lg font-bold ${isComeback ? 'text-warning' : 'text-primary'}`}>
-            {isComeback
-              ? `С возвращением! ${missedDays} ${daysWord(missedDays)} друг без друга 🫣`
-              : '👋 Доброе утро, менеджер!'}
+            {greetingText}
           </h2>
         </div>
 
