@@ -162,6 +162,73 @@ export default function PpSmartPage() {
     setEditingPpSmart(null)
   }
 
+  // ═══ H.3: Создать ЦЕЛЬ НА ГОД из PP SMART ═══
+  async function handleAddToGoals(ppSmart: PpSmart) {
+    try {
+      const formulation = generateFormulation(ppSmart)
+      const title = ppSmart.positive.trim() || 'Цель из PP SMART'
+      const now = new Date().toISOString()
+      const currentYear = new Date().getFullYear()
+
+      const goalId = await db.goals.add({
+        title,
+        description: formulation,
+        sphere: 'Развитие',
+        year: currentYear,
+        status: 'active',
+        progress: 0,
+        order: goals.length,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      // Привязать PP SMART к новой цели
+      await db.ppSmarts.update(ppSmart.id!, {
+        goalId: goalId as number,
+        updatedAt: now,
+      })
+
+      await loadData()
+      setMode('linked')
+      setSelectedGoalId(goalId as number)
+    } catch (error) {
+      console.error('Ошибка создания цели:', error)
+    }
+  }
+
+  // ═══ H.3: Создать СТРАТЕГИЮ из PP SMART ═══
+  async function handleAddToStrategy(ppSmart: PpSmart) {
+    try {
+      const formulation = generateFormulation(ppSmart)
+      const title = ppSmart.positive.trim() || 'Стратегия из PP SMART'
+      const now = new Date().toISOString()
+      const currentYear = new Date().getFullYear()
+
+      const strategyId = await db.strategies.add({
+        title,
+        description: formulation,
+        sphere: 'Развитие',
+        deadline: `${currentYear + 5}-12-31`,
+        status: 'active',
+        order: strategies.length,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      const virtualId = (strategyId as number) + STRATEGY_OFFSET
+      await db.ppSmarts.update(ppSmart.id!, {
+        goalId: virtualId,
+        updatedAt: now,
+      })
+
+      await loadData()
+      setMode('linked')
+      setSelectedGoalId(virtualId)
+    } catch (error) {
+      console.error('Ошибка создания стратегии:', error)
+    }
+  }
+
   const selectedTitle = getSelectedTitle()
 
   function renderPpSmartCard(ppSmart: PpSmart, linkedTitle?: string) {
@@ -223,6 +290,36 @@ export default function PpSmartPage() {
               <h4 className="text-sm font-bold text-text">Итоговая формулировка цели</h4>
             </div>
             <p className="text-sm text-text leading-relaxed italic">«{formulation}»</p>
+          </div>
+        )}
+
+{/* ═══ КНОПКИ: Создать цель / стратегию из PP SMART ═══ */}
+        {isFree && formulation && (
+          <div className="mt-4 bg-success/5 border-2 border-success/20 rounded-xl p-4">
+            <p className="text-sm font-bold text-text mb-3">
+              🚀 Создать цель из этого PP SMART:
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleAddToGoals(ppSmart)}
+                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg
+                           hover:bg-primary-dark transition-colors cursor-pointer
+                           font-medium text-sm flex items-center justify-center gap-2"
+              >
+                📋 В Цели на год
+              </button>
+              <button
+                onClick={() => handleAddToStrategy(ppSmart)}
+                className="flex-1 px-4 py-2.5 bg-warning/10 text-warning border border-warning/30 rounded-lg
+                           hover:bg-warning/20 transition-colors cursor-pointer
+                           font-medium text-sm flex items-center justify-center gap-2"
+              >
+                🎯 В Стратегию 5 лет
+              </button>
+            </div>
+            <p className="text-[10px] text-text-light mt-2">
+              Название = поле Positive · Описание = итоговая формулировка · Сферу можно изменить позже
+            </p>
           </div>
         )}
 

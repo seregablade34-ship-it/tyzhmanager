@@ -141,6 +141,24 @@ export default function PpSmartForm({
     return `${parseInt(day, 10)} ${months[monthIdx]} ${year}`
   }
 
+// Генерация итоговой формулировки (live preview)
+  function generateFormulation(): string {
+    const parts: string[] = []
+    if (values.positive.trim()) parts.push(values.positive.trim())
+    if (values.personal.trim()) parts.push(values.personal.trim())
+    if (values.specific.trim()) parts.push(`а именно: ${values.specific.trim()}`)
+    if (values.measurable.trim()) parts.push(`(${values.measurable.trim()})`)
+    if (values.achievable.trim()) parts.push(`благодаря тому, что ${values.achievable.trim()}`)
+    if (values.relevant.trim()) parts.push(`для ${values.relevant.trim()}`)
+    if (values.timeBound.trim()) {
+      const time = values.timeBound.trim()
+      parts.push(time.toLowerCase().startsWith('до ') ? time : `до ${time}`)
+    }
+    return parts.join(', ')
+  }
+
+  const formulation = generateFormulation()
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSave(values)
@@ -275,6 +293,33 @@ export default function PpSmartForm({
             )}
           </div>
         ))}
+
+{/* ═══ ПРЕДПРОСМОТР ИТОГОВОЙ ФОРМУЛИРОВКИ ═══ */}
+        {filledCount > 0 && formulation && (
+          <div className="bg-gradient-to-r from-primary/5 to-success/5 border-2 border-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📝</span>
+                <h4 className="text-sm font-bold text-text">Итоговая формулировка цели</h4>
+              </div>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                progressPercent === 100
+                  ? 'bg-success/10 text-success'
+                  : 'bg-primary/10 text-primary'
+              }`}>
+                {filledCount}/{totalCount}
+              </span>
+            </div>
+            <p className="text-sm text-text leading-relaxed italic">
+              «{formulation}»
+            </p>
+            {progressPercent === 100 && (
+              <p className="text-xs text-success mt-2 font-medium">
+                ✅ Все поля заполнены — формулировка готова!
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Кнопки */}
         <div className="flex gap-2 pt-2">
