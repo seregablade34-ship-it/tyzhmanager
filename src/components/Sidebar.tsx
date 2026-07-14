@@ -2,18 +2,38 @@ import { NavLink } from 'react-router-dom'
 import { useCombo } from '../hooks/useCombo'
 import { useAchievements } from '../hooks/useAchievements'
 
-const NAV_ITEMS = [
-  { to: '/',            icon: '📅', label: 'Ежедневник' },
-  { to: '/strategy',    icon: '🎯', label: 'Стратегия 5 лет' },
-  { to: '/goals',       icon: '🔍', label: 'Цели на год' },
-  { to: '/evaluation',  icon: '⚖️', label: 'Оценка целей' },
-  { to: '/cascade',     icon: '🪜', label: 'Экшен-каскадирование' },
-  { to: '/pp-smart',    icon: '🧩', label: 'PP SMART' },
-  { to: '/achievements',icon: '🏆', label: 'Достижения' },
-  { to: '/stats',       icon: '📊', label: 'Статистика' },
-  { to: '/settings',    icon: '⚙️', label: 'Настройки' },
-  { to: '/about',       icon: 'ℹ️', label: 'О проекте' },
-  { to: '/instruction', icon: '📖', label: 'Инструкция' },
+const NAV_GROUPS = [
+  {
+    label: 'Ежедневник',
+    items: [
+      { to: '/', icon: '📅', label: 'Ежедневник' },
+    ],
+  },
+  {
+    label: 'Цели',
+    items: [
+      { to: '/strategy',   icon: '🎯', label: 'Стратегия 5 лет' },
+      { to: '/goals',      icon: '📋', label: 'Цели на год' },
+      { to: '/evaluation', icon: '⚖️', label: 'Оценка целей' },
+      { to: '/cascade',    icon: '🪜', label: 'Экшен-каскад' },
+      { to: '/pp-smart',   icon: '🧩', label: 'PP SMART' },
+    ],
+  },
+  {
+    label: 'Прогресс',
+    items: [
+      { to: '/achievements', icon: '🏆', label: 'Достижения' },
+      { to: '/stats',        icon: '📊', label: 'Статистика' },
+    ],
+  },
+  {
+    label: '',
+    items: [
+      { to: '/settings',    icon: '⚙️', label: 'Настройки' },
+      { to: '/about',       icon: 'ℹ️', label: 'О проекте' },
+      { to: '/instruction', icon: '📖', label: 'Инструкция' },
+    ],
+  },
 ]
 
 export default function Sidebar() {
@@ -68,23 +88,42 @@ export default function Sidebar() {
         </p>
       </div>
 
-      {/* === НАВИГАЦИЯ === */}
+      {/* === НАВИГАЦИЯ С ГРУППАМИ === */}
       <nav className="flex-1 overflow-y-auto py-2">
-        {NAV_ITEMS.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? 'bg-primary text-white font-medium'
-                  : 'text-text-light hover:bg-bg hover:text-text'
-              }`
-            }
-          >
-            <span className="text-base">{item.icon}</span>
-            {item.label}
-          </NavLink>
+        {NAV_GROUPS.map((group, groupIndex) => (
+          <div key={groupIndex}>
+            {/* Заголовок группы */}
+            {group.label && (
+              <div className="px-4 pt-4 pb-1 first:pt-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-light/60">
+                  {group.label}
+                </p>
+              </div>
+            )}
+
+            {/* Разделитель перед последней группой (без заголовка) */}
+            {!group.label && (
+              <div className="mx-4 my-2 border-t border-border" />
+            )}
+
+            {/* Пункты меню */}
+            {group.items.map(item => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? 'bg-primary text-white font-medium'
+                      : 'text-text-light hover:bg-bg hover:text-text'
+                  }`
+                }
+              >
+                <span className="text-base">{item.icon}</span>
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 

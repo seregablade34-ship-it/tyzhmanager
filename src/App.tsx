@@ -55,7 +55,6 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/instruction" element={<InstructionPage />} />
-            <Route path="/instruction" element={<InstructionPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

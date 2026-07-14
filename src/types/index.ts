@@ -60,6 +60,8 @@ export interface ActionStep {
   title: string           // Название шага
   isCompleted: boolean    // Выполнен?
   deadline?: string       // Срок
+  description?: string    // Описание шага
+  actions?: string        // Действия и намерения
   order: number           // Порядок
   level: number           // Уровень вложенности (0, 1, 2...)
   createdAt: string
