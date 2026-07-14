@@ -3,7 +3,6 @@ import { db } from '../db/database'
 import type { Goal, Strategy, ActionStep } from '../types'
 import ActionStepItem from '../components/ActionStepItem'
 
-
 export default function ActionCascadePage() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
@@ -17,6 +16,8 @@ export default function ActionCascadePage() {
   // Форма добавления/редактирования
   const [showForm, setShowForm] = useState(false)
   const [formTitle, setFormTitle] = useState('')
+  const [formDescription, setFormDescription] = useState('')
+  const [formActions, setFormActions] = useState('')
   const [formDeadline, setFormDeadline] = useState('')
   const [formParentId, setFormParentId] = useState<number | undefined>(undefined)
   const [formLevel, setFormLevel] = useState(0)
@@ -48,10 +49,8 @@ export default function ActionCascadePage() {
     }
   }
 
-   // Шаги для выбранной цели
+  // Шаги для выбранной цели
   const goalSteps = steps.filter(s => s.goalId === selectedGoalId)
-
-  // Корневые шаги (без родителя)
   const rootSteps = goalSteps.filter(s => !s.parentId)
 
   // Статистика
@@ -61,21 +60,15 @@ export default function ActionCascadePage() {
     ? Math.round((completedSteps / totalSteps) * 100)
     : 0
 
-  // Сколько целей имеют шаги
   const goalsWithSteps = new Set(steps.map(s => s.goalId))
-
-  // Выбранная цель
   const selectedGoal = goals.find(g => g.id === selectedGoalId) || null
 
   // ===== ИМПОРТ ИЗ СТРАТЕГИИ =====
   async function handleImportStrategy(_id: number, title: string) {
-    // Создаём корневой шаг из стратегической цели
     if (!selectedGoalId) return
-
     try {
       const now = new Date().toISOString()
       const siblings = goalSteps.filter(s => !s.parentId)
-
       await db.actionSteps.add({
         goalId: selectedGoalId,
         parentId: undefined,
@@ -86,7 +79,6 @@ export default function ActionCascadePage() {
         createdAt: now,
         updatedAt: now,
       })
-
       await loadData()
       setShowImport(false)
     } catch (error) {
@@ -97,11 +89,9 @@ export default function ActionCascadePage() {
   // ===== ИМПОРТ ИЗ ЦЕЛЕЙ НА ГОД =====
   async function handleImportGoal(_id: number, title: string) {
     if (!selectedGoalId) return
-
     try {
       const now = new Date().toISOString()
       const siblings = goalSteps.filter(s => !s.parentId)
-
       await db.actionSteps.add({
         goalId: selectedGoalId,
         parentId: undefined,
@@ -112,7 +102,6 @@ export default function ActionCascadePage() {
         createdAt: now,
         updatedAt: now,
       })
-
       await loadData()
       setShowImport(false)
     } catch (error) {
@@ -124,6 +113,8 @@ export default function ActionCascadePage() {
   function handleAdd(parentId?: number, level: number = 0) {
     setEditingStep(null)
     setFormTitle('')
+    setFormDescription('')
+    setFormActions('')
     setFormDeadline('')
     setFormParentId(parentId)
     setFormLevel(level)
@@ -134,6 +125,8 @@ export default function ActionCascadePage() {
   function handleEdit(step: ActionStep) {
     setEditingStep(step)
     setFormTitle(step.title)
+    setFormDescription(step.description || '')
+    setFormActions(step.actions || '')
     setFormDeadline(step.deadline || '')
     setFormParentId(step.parentId)
     setFormLevel(step.level)
@@ -150,6 +143,8 @@ export default function ActionCascadePage() {
       if (editingStep) {
         await db.actionSteps.update(editingStep.id!, {
           title: formTitle.trim(),
+          description: formDescription.trim() || undefined,
+          actions: formActions.trim() || undefined,
           deadline: formDeadline || undefined,
           updatedAt: now,
         })
@@ -162,6 +157,8 @@ export default function ActionCascadePage() {
           goalId: selectedGoalId,
           parentId: formParentId,
           title: formTitle.trim(),
+          description: formDescription.trim() || undefined,
+          actions: formActions.trim() || undefined,
           isCompleted: false,
           deadline: formDeadline || undefined,
           order: siblings.length,
@@ -175,6 +172,8 @@ export default function ActionCascadePage() {
       setShowForm(false)
       setEditingStep(null)
       setFormTitle('')
+      setFormDescription('')
+      setFormActions('')
       setFormDeadline('')
     } catch (error) {
       console.error('Ошибка сохранения:', error)
@@ -215,11 +214,50 @@ export default function ActionCascadePage() {
     }
   }
 
+  // ===== В ЕЖЕДНЕВНИК =====
+  async function handleSendToDaily(step: ActionStep, dateStr: string) {
+    if (!dateStr) return
+
+    try {
+      const now = new Date().toISOString()
+
+      const entry = await db.dailyEntries.where('date').equals(dateStr).first()
+      if (!entry) {
+        await db.dailyEntries.add({
+          date: dateStr,
+          createdAt: now,
+          updatedAt: now,
+        })
+      }
+
+      const existingTasks = await db.tasks.where('date').equals(dateStr).count()
+
+      await db.tasks.add({
+        goalId: selectedGoalId || undefined,
+        actionStepId: step.id,
+        date: dateStr,
+        title: step.title,
+        status: 'not-started',
+        priority: 'medium',
+        subtasks: [],
+        order: existingTasks,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      alert(`✅ «${step.title}» добавлено в ежедневник на ${dateStr}`)
+    } catch (error) {
+      console.error('Ошибка:', error)
+    }
+  }
+
   // Отмена формы
   function handleCancel() {
     setShowForm(false)
     setEditingStep(null)
     setFormTitle('')
+    setFormDescription('')
+    setFormActions('')
     setFormDeadline('')
   }
 
@@ -336,7 +374,6 @@ export default function ActionCascadePage() {
             </div>
 
             <div className="flex gap-2">
-              {/* Кнопка импорта */}
               <button
                 onClick={() => {
                   setShowImport(!showImport)
@@ -353,7 +390,6 @@ export default function ActionCascadePage() {
                 <span>Импорт</span>
               </button>
 
-              {/* Кнопка добавить */}
               <button
                 onClick={() => {
                   handleAdd(undefined, 0)
@@ -376,7 +412,6 @@ export default function ActionCascadePage() {
                 📥 Импорт — добавить шаг из другого блока
               </h3>
 
-              {/* Импорт из стратегии */}
               {strategies.length > 0 && (
                 <div className="mb-4">
                   <p className="text-xs font-medium text-text-light mb-2">
@@ -400,7 +435,6 @@ export default function ActionCascadePage() {
                 </div>
               )}
 
-              {/* Импорт из целей на год */}
               <div>
                 <p className="text-xs font-medium text-text-light mb-2">
                   📋 Из целей на год:
@@ -438,7 +472,7 @@ export default function ActionCascadePage() {
             </div>
           )}
 
-          {/* Форма (если открыта) */}
+          {/* ===== ФОРМА ===== */}
           {showForm && (
             <div className="bg-surface border-2 border-primary/20 rounded-xl p-4 mb-4">
               <h3 className="font-semibold text-text mb-3 text-sm">
@@ -467,11 +501,33 @@ export default function ActionCascadePage() {
                   }}
                 />
 
+                <textarea
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="📝 Описание шага (необязательно)..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg border border-border
+                             bg-bg text-text placeholder-text-light/50
+                             focus:outline-none focus:ring-2 focus:ring-primary/30
+                             focus:border-primary transition-colors resize-none"
+                />
+
+                <textarea
+                  value={formActions}
+                  onChange={(e) => setFormActions(e.target.value)}
+                  placeholder="🎯 Действия и намерения (необязательно)..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg border border-border
+                             bg-bg text-text placeholder-text-light/50
+                             focus:outline-none focus:ring-2 focus:ring-primary/30
+                             focus:border-primary transition-colors resize-none"
+                />
+
                 <input
-                  type="text"
+                  type="date"
                   value={formDeadline}
                   onChange={(e) => setFormDeadline(e.target.value)}
-                  placeholder="Дедлайн (необязательно), например: до 15 июля"
+                  placeholder="📅 Дедлайн (необязательно), например: до 15 июля"
                   className="w-full px-3 py-2 rounded-lg border border-border
                              bg-bg text-text placeholder-text-light/50
                              focus:outline-none focus:ring-2 focus:ring-primary/30
@@ -499,7 +555,7 @@ export default function ActionCascadePage() {
             </div>
           )}
 
-          {/* Дерево шагов */}
+          {/* ===== ДЕРЕВО ШАГОВ ===== */}
           {rootSteps.length > 0 ? (
             <div>
               {rootSteps.map(step => {
@@ -514,6 +570,7 @@ export default function ActionCascadePage() {
                     onAdd={handleAdd}
                     onDelete={handleDelete}
                     onEdit={handleEdit}
+                    onSendToDaily={handleSendToDaily}
                   />
                 )
               })}
