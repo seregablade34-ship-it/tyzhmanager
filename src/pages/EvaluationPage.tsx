@@ -5,10 +5,8 @@ import DescartesSquareForm from '../components/DescartesSquareForm'
 import ThreePForm from '../components/ThreePForm'
 import CoachingWizard from '../components/CoachingWizard'
 
-// Экраны
 type Screen = 'hub' | 'descartes' | 'threeP' | 'coaching'
 
-// Виртуальный ID: для стратегий используем offset чтобы не путать с целями
 const STRATEGY_OFFSET = 100000
 
 export default function EvaluationPage() {
@@ -18,7 +16,6 @@ export default function EvaluationPage() {
   const [screen, setScreen] = useState<Screen>('hub')
   const [isLoading, setIsLoading] = useState(true)
 
-  // Данные инструментов (для отображения статуса)
   const [descartesData, setDescartesData] = useState<DescartesSquare[]>([])
   const [threePData, setThreePData] = useState<ThreePResult[]>([])
   const [coachingData, setCoachingData] = useState<CoachingSession[]>([])
@@ -55,7 +52,6 @@ export default function EvaluationPage() {
     }
   }
 
-  // Получить название выбранной цели/стратегии
   function getSelectedTitle(): string {
     if (!selectedGoalId) return ''
     if (selectedGoalId >= STRATEGY_OFFSET) {
@@ -66,7 +62,6 @@ export default function EvaluationPage() {
     return g?.title || ''
   }
 
-  // Проверяем, есть ли данные по инструментам для выбранной цели
   function hasDescartes(): boolean {
     return descartesData.some(d => d.goalId === selectedGoalId)
   }
@@ -77,19 +72,10 @@ export default function EvaluationPage() {
     return coachingData.some(d => d.goalId === selectedGoalId && d.isCompleted)
   }
 
-  // Сколько инструментов пройдено для выбранной цели
   const toolsDone = [hasDescartes(), hasThreeP(), hasCoaching()].filter(Boolean).length
 
-  // Карточки инструментов — 3 штуки (без Эйзенхауэра)
+  // 3 инструмента в правильном порядке: 3П → Декарт → Коучинг
   const tools = [
-    {
-      id: 'descartes' as Screen,
-      icon: '🔲',
-      title: 'Квадрат Декарта',
-      description: '4 вопроса помогут увидеть цель со всех сторон',
-      done: hasDescartes(),
-      color: 'border-primary/30 hover:border-primary',
-    },
     {
       id: 'threeP' as Screen,
       icon: '🎯',
@@ -97,6 +83,14 @@ export default function EvaluationPage() {
       description: 'Быстрый фильтр: Приближение, Последствия, Профит',
       done: hasThreeP(),
       color: 'border-success/30 hover:border-success',
+    },
+    {
+      id: 'descartes' as Screen,
+      icon: '📲',
+      title: 'Квадрат Декарта',
+      description: '4 вопроса помогут увидеть цель со всех сторон',
+      done: hasDescartes(),
+      color: 'border-primary/30 hover:border-primary',
     },
     {
       id: 'coaching' as Screen,
@@ -116,7 +110,6 @@ export default function EvaluationPage() {
     )
   }
 
-  // Нет целей и стратегий
   if (goals.length === 0 && strategies.length === 0) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
@@ -134,7 +127,6 @@ export default function EvaluationPage() {
     )
   }
 
-  // Квадрат Декарта
   if (screen === 'descartes' && selectedGoalId) {
     return (
       <DescartesSquareForm
@@ -145,7 +137,6 @@ export default function EvaluationPage() {
     )
   }
 
-  // Метод 3П
   if (screen === 'threeP' && selectedGoalId) {
     return (
       <ThreePForm
@@ -156,7 +147,6 @@ export default function EvaluationPage() {
     )
   }
 
-  // Мини-самокоучинг
   if (screen === 'coaching' && selectedGoalId) {
     return (
       <CoachingWizard
@@ -167,13 +157,12 @@ export default function EvaluationPage() {
     )
   }
 
-  // ХАБ — выбор инструмента
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
 
       {/* Заголовок */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text">⚖️ Оценка целей</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text">⚖️ Оценка целей</h1>
         <p className="text-sm text-text-light mt-1">
           Оцените и приоритизируйте цели с помощью 3 инструментов
         </p>
@@ -185,7 +174,6 @@ export default function EvaluationPage() {
           Выберите цель для оценки:
         </label>
 
-        {/* Цели на год */}
         {goals.length > 0 && (
           <div className="mb-3">
             <p className="text-xs font-medium text-text-light mb-1.5">📋 Цели на год:</p>
@@ -197,20 +185,17 @@ export default function EvaluationPage() {
                     key={goal.id}
                     onClick={() => setSelectedGoalId(goal.id!)}
                     className={`
-                      w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
-                      flex items-center justify-between
+                      w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all cursor-pointer
                       ${isSelected
                         ? 'bg-primary/10 border-2 border-primary text-text'
                         : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
                       }
                     `}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{goal.title}</span>
-                      <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
-                        {goal.sphere}
-                      </span>
-                    </div>
+                    <span className="text-sm font-medium break-words">{goal.title}</span>
+                    <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full ml-2">
+                      {goal.sphere}
+                    </span>
                   </button>
                 )
               })}
@@ -218,7 +203,6 @@ export default function EvaluationPage() {
           </div>
         )}
 
-        {/* Стратегические цели */}
         {strategies.length > 0 && (
           <div>
             <p className="text-xs font-medium text-text-light mb-1.5">🎯 Стратегия 5 лет:</p>
@@ -231,23 +215,20 @@ export default function EvaluationPage() {
                     key={virtualId}
                     onClick={() => setSelectedGoalId(virtualId)}
                     className={`
-                      w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
-                      flex items-center justify-between
+                      w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all cursor-pointer
                       ${isSelected
                         ? 'bg-primary/10 border-2 border-primary text-text'
                         : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
                       }
                     `}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{strategy.title}</span>
-                      <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
-                        {strategy.sphere}
-                      </span>
-                      <span className="text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">
-                        🎯 стратегия
-                      </span>
-                    </div>
+                    <span className="text-sm font-medium break-words">{strategy.title}</span>
+                    <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full ml-2">
+                      {strategy.sphere}
+                    </span>
+                    <span className="text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full ml-1">
+                      🎯 стратегия
+                    </span>
                   </button>
                 )
               })}
@@ -256,7 +237,7 @@ export default function EvaluationPage() {
         )}
       </div>
 
-      {/* Статус оценки */}
+      {/* Прогресс оценки */}
       {selectedGoalId && toolsDone > 0 && (
         <div className="bg-surface border border-border rounded-xl p-3 mb-4
                         flex items-center justify-between">
@@ -273,30 +254,34 @@ export default function EvaluationPage() {
         </div>
       )}
 
-      {/* 3 инструмента */}
+      {/* 3 инструмента — КОЛОНКА (не сетка!) */}
       {selectedGoalId && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-3">
           {tools.map(tool => (
             <button
               key={tool.id}
               onClick={() => setScreen(tool.id)}
               className={`
-                bg-surface border-2 ${tool.color} rounded-xl p-5
+                w-full bg-surface border-2 ${tool.color} rounded-xl p-4
                 text-left transition-all cursor-pointer hover:shadow-md
-                relative
+                flex items-center gap-4 relative
               `}
             >
+              {/* Иконка */}
+              <span className="text-3xl flex-shrink-0">{tool.icon}</span>
+
+              {/* Текст */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-text text-sm sm:text-base">{tool.title}</h3>
+                <p className="text-xs text-text-light mt-0.5 break-words">{tool.description}</p>
+              </div>
+
               {/* Статус */}
               {tool.done && (
-                <span className="absolute top-3 right-3 text-xs bg-success/10
-                               text-success px-2 py-0.5 rounded-full font-medium">
+                <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                   ✅ Пройден
                 </span>
               )}
-
-              <p className="text-3xl mb-3">{tool.icon}</p>
-              <h3 className="font-semibold text-text mb-1">{tool.title}</h3>
-              <p className="text-xs text-text-light">{tool.description}</p>
             </button>
           ))}
         </div>

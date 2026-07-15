@@ -63,7 +63,7 @@ export default function ActionCascadePage() {
   const goalsWithSteps = new Set(steps.map(s => s.goalId))
   const selectedGoal = goals.find(g => g.id === selectedGoalId) || null
 
-  // ===== ИМПОРТ ИЗ СТРАТЕГИИ =====
+  // ===== ИМПОРТ ИЗ СТРАТЕГИЙ =====
   async function handleImportStrategy(_id: number, title: string) {
     if (!selectedGoalId) return
     try {
@@ -288,11 +288,11 @@ export default function ActionCascadePage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
 
       {/* Заголовок */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text">🔗 Экшен-каскадирование</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text">🔗 Экшен-каскадирование</h1>
         <p className="text-sm text-text-light mt-1">
           Разбейте цель на конкретные шаги — от крупных к мелким
         </p>
@@ -319,27 +319,28 @@ export default function ActionCascadePage() {
                   setEditingStep(null)
                 }}
                 className={`
-                  w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
-                  flex items-center justify-between
+                  w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all cursor-pointer
                   ${isSelected
                     ? 'bg-primary/10 border-2 border-primary text-text'
                     : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
                   }
                 `}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{goal.title}</span>
-                  <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
-                    {goal.sphere}
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium break-words flex-1 min-w-0">{goal.title}</span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
+                      {goal.sphere}
+                    </span>
+                    {hasSteps ? (
+                      <span className="text-xs text-success font-medium whitespace-nowrap">
+                        {goalStepCount} шагов
+                      </span>
+                    ) : (
+                      <span className="text-xs text-text-light">—</span>
+                    )}
+                  </div>
                 </div>
-                {hasSteps ? (
-                  <span className="text-xs text-success font-medium">
-                    {goalStepCount} шагов
-                  </span>
-                ) : (
-                  <span className="text-xs text-text-light">—</span>
-                )}
               </button>
             )
           })}
@@ -350,37 +351,37 @@ export default function ActionCascadePage() {
       {selectedGoal && (
         <>
           {/* Статистика + кнопки */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              {totalSteps > 0 && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-bg rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300
-                                   ${overallProgress === 100 ? 'bg-success' : 'bg-primary'}`}
-                        style={{ width: `${overallProgress}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-bold text-text">
-                      {overallProgress}%
-                    </span>
+          <div className="mb-4">
+            {/* Прогресс-бар */}
+            {totalSteps > 0 && (
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="w-full max-w-[120px] h-2 bg-bg rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300
+                                 ${overallProgress === 100 ? 'bg-success' : 'bg-primary'}`}
+                      style={{ width: `${overallProgress}%` }}
+                    />
                   </div>
-                  <span className="text-xs text-text-light">
-                    {completedSteps}/{totalSteps} шагов
+                  <span className="text-sm font-bold text-text whitespace-nowrap">
+                    {overallProgress}%
                   </span>
-                </>
-              )}
-            </div>
+                </div>
+                <span className="text-xs text-text-light whitespace-nowrap">
+                  {completedSteps}/{totalSteps} шагов
+                </span>
+              </div>
+            )}
 
+            {/* Кнопки — всегда на отдельной строке */}
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   setShowImport(!showImport)
                   setShowForm(false)
                 }}
-                className={`px-3 py-2 rounded-lg transition-colors cursor-pointer
-                           font-medium text-sm flex items-center gap-1
+                className={`flex-1 sm:flex-none px-3 py-2 rounded-lg transition-colors cursor-pointer
+                           font-medium text-sm flex items-center justify-center gap-1
                            ${showImport
                              ? 'bg-warning/20 text-warning'
                              : 'bg-bg text-text-light hover:bg-border hover:text-text'
@@ -395,9 +396,9 @@ export default function ActionCascadePage() {
                   handleAdd(undefined, 0)
                   setShowImport(false)
                 }}
-                className="px-4 py-2 bg-primary text-white rounded-lg
+                className="flex-1 sm:flex-none px-4 py-2 bg-primary text-white rounded-lg
                            hover:bg-primary-dark transition-colors cursor-pointer
-                           font-medium text-sm flex items-center gap-1"
+                           font-medium text-sm flex items-center justify-center gap-1"
               >
                 <span>+</span>
                 <span>Добавить шаг</span>
@@ -527,7 +528,6 @@ export default function ActionCascadePage() {
                   type="date"
                   value={formDeadline}
                   onChange={(e) => setFormDeadline(e.target.value)}
-                  placeholder="📅 Дедлайн (необязательно), например: до 15 июля"
                   className="w-full px-3 py-2 rounded-lg border border-border
                              bg-bg text-text placeholder-text-light/50
                              focus:outline-none focus:ring-2 focus:ring-primary/30
