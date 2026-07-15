@@ -106,10 +106,10 @@ export interface Task {
   actionStepId?: number   // Связь с шагом каскада (необязательно)
   date: string            // Дата
   title: string           // Текст задачи
-  status: TaskStatus      // 4 статуса задачи
-  priority: TaskPriority  // Приоритет
+  status: TaskStatus      // Статус задачи
+  priority: TaskPriority  // Приоритет (по Методу 3П)
   tag?: TaskTag           // Тег (необязательно)
-  duration?: number               // Время на задачу в минутах (по умолчанию 60)
+  duration?: number       // Время на задачу в минутах (по умолчанию 60)
   subtasks: SubTask[]     // Подзадачи (декомпозиция)
   order: number           // Порядок
   createdAt: string
@@ -160,34 +160,18 @@ export interface UserSettings {
 }
 
 // ==========================================
-// ОЦЕНКА ЦЕЛЕЙ — 4 инструмента
+// ОЦЕНКА ЦЕЛЕЙ — 3 инструмента
 // ==========================================
 
 // Квадрат Декарта — 4 вопроса, на каждый минимум 3 ответа
 export interface DescartesSquare {
   id?: number
   goalId: number
-  // 4 квадранта — массивы ответов (минимум 3 в каждом)
   doPositive: string[]     // Что случится, если СДЕЛАЮ?
   dontNegative: string[]   // Что случится, если НЕ сделаю?
   doNegative: string[]     // Чего НЕ случится, если СДЕЛАЮ?
   dontPositive: string[]   // Чего НЕ случится, если НЕ сделаю?
   recommendation: 'do' | 'dont' | 'unclear'  // Результат
-  createdAt: string
-  updatedAt: string
-}
-
-// Матрица Эйзенхауэра — позиция цели в матрице
-export type EisenhowerQuadrant =
-  | 'urgent-important'      // 🔴 Делай сейчас
-  | 'not-urgent-important'  // 🟡 Запланируй
-  | 'urgent-not-important'  // 🔵 Делегируй
-  | 'not-urgent-not-important' // ⚪ Подумай, нужно ли
-
-export interface EisenhowerItem {
-  id?: number
-  goalId: number
-  quadrant: EisenhowerQuadrant
   createdAt: string
   updatedAt: string
 }
@@ -225,7 +209,6 @@ export interface CoachingSession {
 // РЕФЛЕКСИЯ ПРИ ЗАВЕРШЕНИИ ЦЕЛИ
 // ==========================================
 
-// Рефлексия при завершении цели (для Стратегии и Целей на год)
 export interface GoalReflection {
   id?: number
   goalId?: number         // Связь с целью на год (необязательно)

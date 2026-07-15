@@ -132,14 +132,13 @@ export default function StatsPage() {
   const [ppSmarts, setPpSmarts] = useState<any[]>([])
   const [actionSteps, setActionSteps] = useState<any[]>([])
   const [descartesSquares, setDescartesSquares] = useState<any[]>([])
-  const [eisenhowerItems, setEisenhowerItems] = useState<any[]>([])
   const [threePResults, setThreePResults] = useState<any[]>([])
   const [coachingSessions, setCoachingSessions] = useState<any[]>([])
   const [taskTransfers, setTaskTransfers] = useState<any[]>([])
 
   // ─── Загрузка ВСЕХ данных (авто-обновление) ───
   const loadAll = useCallback(async () => {
-    const [de, t, g, s, pp, as2, ds, ei, tp, cs, tt] = await Promise.all([
+    const [de, t, g, s, pp, as2, ds, tp, cs, tt] = await Promise.all([
       db.dailyEntries.toArray(),
       db.tasks.toArray(),
       db.goals.toArray(),
@@ -147,7 +146,6 @@ export default function StatsPage() {
       db.ppSmarts.toArray(),
       db.actionSteps.toArray(),
       db.descartesSquares.toArray(),
-      db.eisenhowerItems.toArray(),
       db.threePResults.toArray(),
       db.coachingSessions.toArray(),
       db.taskTransfers.toArray(),
@@ -159,7 +157,6 @@ export default function StatsPage() {
     setPpSmarts(pp)
     setActionSteps(as2)
     setDescartesSquares(ds)
-    setEisenhowerItems(ei)
     setThreePResults(tp)
     setCoachingSessions(cs)
     setTaskTransfers(tt)
@@ -821,11 +818,6 @@ export default function StatsPage() {
             <p className="text-2xl mb-1">🔲</p>
             <p className="text-xl font-bold text-text">{descartesSquares.length}</p>
             <p className="text-xs text-text-light">Квадрат Декарта</p>
-          </div>
-          <div className="bg-bg rounded-lg p-3 text-center">
-            <p className="text-2xl mb-1">📊</p>
-            <p className="text-xl font-bold text-text">{eisenhowerItems.length}</p>
-            <p className="text-xs text-text-light">Эйзенхауэр</p>
           </div>
           <div className="bg-bg rounded-lg p-3 text-center">
             <p className="text-2xl mb-1">🎯</p>

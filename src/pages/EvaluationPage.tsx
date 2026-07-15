@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { db } from '../db/database'
-import type { Goal, Strategy, DescartesSquare, ThreePResult, CoachingSession, EisenhowerItem } from '../types'
+import type { Goal, Strategy, DescartesSquare, ThreePResult, CoachingSession } from '../types'
 import DescartesSquareForm from '../components/DescartesSquareForm'
-import EisenhowerMatrix from '../components/EisenhowerMatrix'
 import ThreePForm from '../components/ThreePForm'
 import CoachingWizard from '../components/CoachingWizard'
 
 // Экраны
-type Screen = 'hub' | 'descartes' | 'eisenhower' | 'threeP' | 'coaching'
+type Screen = 'hub' | 'descartes' | 'threeP' | 'coaching'
 
 // Виртуальный ID: для стратегий используем offset чтобы не путать с целями
 const STRATEGY_OFFSET = 100000
@@ -21,7 +20,6 @@ export default function EvaluationPage() {
 
   // Данные инструментов (для отображения статуса)
   const [descartesData, setDescartesData] = useState<DescartesSquare[]>([])
-  const [eisenhowerData, setEisenhowerData] = useState<EisenhowerItem[]>([])
   const [threePData, setThreePData] = useState<ThreePResult[]>([])
   const [coachingData, setCoachingData] = useState<CoachingSession[]>([])
 
@@ -31,18 +29,16 @@ export default function EvaluationPage() {
 
   async function loadData() {
     try {
-      const [goalsArr, strategiesArr, descArr, eisArr, tpArr, coachArr] = await Promise.all([
+      const [goalsArr, strategiesArr, descArr, tpArr, coachArr] = await Promise.all([
         db.goals.orderBy('order').toArray(),
         db.strategies.orderBy('order').toArray(),
         db.descartesSquares.toArray(),
-        db.eisenhowerItems.toArray(),
         db.threePResults.toArray(),
         db.coachingSessions.toArray(),
       ])
       setGoals(goalsArr)
       setStrategies(strategiesArr)
       setDescartesData(descArr)
-      setEisenhowerData(eisArr)
       setThreePData(tpArr)
       setCoachingData(coachArr)
       if ((goalsArr.length > 0 || strategiesArr.length > 0) && !selectedGoalId) {
@@ -74,9 +70,6 @@ export default function EvaluationPage() {
   function hasDescartes(): boolean {
     return descartesData.some(d => d.goalId === selectedGoalId)
   }
-  function hasEisenhower(): boolean {
-    return eisenhowerData.some(d => d.goalId === selectedGoalId)
-  }
   function hasThreeP(): boolean {
     return threePData.some(d => d.goalId === selectedGoalId)
   }
@@ -85,9 +78,9 @@ export default function EvaluationPage() {
   }
 
   // Сколько инструментов пройдено для выбранной цели
-  const toolsDone = [hasDescartes(), hasEisenhower(), hasThreeP(), hasCoaching()].filter(Boolean).length
+  const toolsDone = [hasDescartes(), hasThreeP(), hasCoaching()].filter(Boolean).length
 
-  // Карточки инструментов
+  // Карточки инструментов — 3 штуки (без Эйзенхауэра)
   const tools = [
     {
       id: 'descartes' as Screen,
@@ -96,14 +89,6 @@ export default function EvaluationPage() {
       description: '4 вопроса помогут увидеть цель со всех сторон',
       done: hasDescartes(),
       color: 'border-primary/30 hover:border-primary',
-    },
-    {
-      id: 'eisenhower' as Screen,
-      icon: '📊',
-      title: 'Матрица Эйзенхауэра',
-      description: 'Определите важность и срочность каждой цели',
-      done: hasEisenhower(),
-      color: 'border-danger/30 hover:border-danger',
     },
     {
       id: 'threeP' as Screen,
@@ -160,15 +145,6 @@ export default function EvaluationPage() {
     )
   }
 
-  // Матрица Эйзенхауэра
-  if (screen === 'eisenhower') {
-    return (
-      <EisenhowerMatrix
-        onBack={() => { setScreen('hub'); loadData() }}
-      />
-    )
-  }
-
   // Метод 3П
   if (screen === 'threeP' && selectedGoalId) {
     return (
@@ -199,7 +175,7 @@ export default function EvaluationPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text">⚖️ Оценка целей</h1>
         <p className="text-sm text-text-light mt-1">
-          Оцените и приоритизируйте цели с помощью 4 инструментов
+          Оцените и приоритизируйте цели с помощью 3 инструментов
         </p>
       </div>
 
@@ -285,21 +261,21 @@ export default function EvaluationPage() {
         <div className="bg-surface border border-border rounded-xl p-3 mb-4
                         flex items-center justify-between">
           <span className="text-sm text-text-light">
-            Прогресс оценки: <strong className="text-text">{toolsDone} из 4</strong> инструментов
+            Прогресс оценки: <strong className="text-text">{toolsDone} из 3</strong> инструментов
           </span>
           <div className="w-24 h-2 bg-bg rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300
-                         ${toolsDone === 4 ? 'bg-success' : 'bg-primary'}`}
-              style={{ width: `${(toolsDone / 4) * 100}%` }}
+                         ${toolsDone === 3 ? 'bg-success' : 'bg-primary'}`}
+              style={{ width: `${(toolsDone / 3) * 100}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* 4 инструмента */}
+      {/* 3 инструмента */}
       {selectedGoalId && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {tools.map(tool => (
             <button
               key={tool.id}

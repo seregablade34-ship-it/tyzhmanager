@@ -16,7 +16,6 @@ import type {
   Combo,
   UserSettings,
   DescartesSquare,
-  EisenhowerItem,
   ThreePResult,
   CoachingSession,
   GoalReflection,
@@ -36,9 +35,8 @@ class TyzhManagerDB extends Dexie {
   achievements!: Table<Achievement>
   combos!: Table<Combo>
   userSettings!: Table<UserSettings>
-  // Оценка целей
+  // Оценка целей (3 инструмента — без Эйзенхауэра)
   descartesSquares!: Table<DescartesSquare>
-  eisenhowerItems!: Table<EisenhowerItem>
   threePResults!: Table<ThreePResult>
   coachingSessions!: Table<CoachingSession>
   // Рефлексия
@@ -127,7 +125,7 @@ class TyzhManagerDB extends Dexie {
       goalReflections:  '++id, goalId, strategyId, type',
     })
 
-    // Версия 5 — переносы/дублирование задач
+    // Версия 5 — переносы задач
     this.version(5).stores({
       strategies:       '++id, sphere, deadline, order',
       goals:            '++id, strategyId, sphere, year, status, order',
@@ -144,7 +142,26 @@ class TyzhManagerDB extends Dexie {
       threePResults:    '++id, goalId',
       coachingSessions: '++id, goalId, isCompleted',
       goalReflections:  '++id, goalId, strategyId, type',
-      // Новая таблица
+      taskTransfers:    '++id, taskId, fromDate, toDate, type, reason',
+    })
+
+    // Версия 6 — удаляем таблицу Эйзенхауэра
+    this.version(6).stores({
+      strategies:       '++id, sphere, deadline, order',
+      goals:            '++id, strategyId, sphere, year, status, order',
+      ppSmarts:         '++id, goalId',
+      actionSteps:      '++id, goalId, parentId, isCompleted, order',
+      dailyEntries:     '++id, &date',
+      tasks:            '++id, dailyEntryId, goalId, actionStepId, date, status, priority, tag, order',
+      goalEvaluations:  '++id, goalId, date',
+      achievements:     '++id, type, isUnlocked',
+      combos:           '++id, type',
+      userSettings:     '++id',
+      descartesSquares: '++id, goalId',
+      eisenhowerItems:  null,
+      threePResults:    '++id, goalId',
+      coachingSessions: '++id, goalId, isCompleted',
+      goalReflections:  '++id, goalId, strategyId, type',
       taskTransfers:    '++id, taskId, fromDate, toDate, type, reason',
     })
   }

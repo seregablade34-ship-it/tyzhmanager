@@ -66,7 +66,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'perfect_365', icon: '🏆', title: 'Год совершенства',     description: '365 идеальных дней',              xp: 500, category: 'perfect' },
 
   // ═══════════════════════════════════════
-  // 🛠️ ИНСТРУМЕНТЫ (10 штук)
+  // 🛠️ ИНСТРУМЕНТЫ (9 штук — без Эйзенхауэра)
   // ═══════════════════════════════════════
   { id: 'first_smart',       icon: '🧠', title: 'Стратег',             description: 'Создан первый PP SMART',              xp: 10, category: 'tools' },
   { id: 'smart_3',           icon: '🧠', title: 'SMART-мастер',        description: 'Создано 3 PP SMART',                  xp: 25, category: 'tools' },
@@ -74,10 +74,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'cascade_3',         icon: '🔗', title: 'Каскадёр',            description: 'Создано 3 экшен-каскада',             xp: 25, category: 'tools' },
   { id: 'first_descartes',   icon: '🔲', title: 'Аналитик',            description: 'Пройден Квадрат Декарта',             xp: 10, category: 'tools' },
   { id: 'descartes_5',       icon: '🔲', title: 'Гроссмейстер анализа', description: 'Пройдено 5 Квадратов Декарта',       xp: 30, category: 'tools' },
-  { id: 'first_eisenhower',  icon: '📊', title: 'Приоритизатор',       description: 'Использована Матрица Эйзенхауэра',   xp: 10, category: 'tools' },
   { id: 'first_3p',          icon: '🎯', title: 'Фильтровщик',        description: 'Пройден Метод 3П',                    xp: 10, category: 'tools' },
   { id: 'first_coaching',    icon: '💬', title: 'Коуч',                description: 'Пройден мини-самокоучинг',            xp: 15, category: 'tools' },
-  { id: 'all_tools',         icon: '🏅', title: 'Мастер инструментов', description: 'Использованы все 6 инструментов',     xp: 50, category: 'tools' },
+  { id: 'all_tools',         icon: '🏅', title: 'Мастер инструментов', description: 'Использованы все 5 инструментов',     xp: 50, category: 'tools' },
 
   // ═══════════════════════════════════════
   // ⭐ СПЕЦИАЛЬНЫЕ (10 штук)
@@ -91,7 +90,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'tasks_1000',       icon: '🌍', title: 'Титан',               description: 'Выполнено 1000 задач',        xp: 400, category: 'special' },
   { id: 'transfer_first',   icon: '📦', title: 'Гибкий планировщик',  description: 'Первый перенос задачи',       xp: 10, category: 'special' },
   { id: 'transfer_10',      icon: '📦', title: 'Адаптивный',          description: '10 переносов задач',          xp: 25, category: 'special' },
- { id: 'early_bird',       icon: '🌅', title: 'Ранняя пташка',       description: 'Запись до 7:00 утра',         xp: 15, category: 'special' },
+  { id: 'early_bird',       icon: '🌅', title: 'Ранняя пташка',       description: 'Запись до 7:00 утра',         xp: 15, category: 'special' },
 
   // 🏆 СЕКРЕТНОЕ — открывается при получении ВСЕХ остальных бейджей
   { id: 'secret_tyzhmanager', icon: '🔮', title: '#тыжменеджер', description: 'Секретное достижение', xp: 0, category: 'secret' },
@@ -245,14 +244,13 @@ export function useAchievements() {
   // Проверка ВСЕХ условий
   const checkAll = useCallback(async (comboCount: number) => {
     try {
-      const [goals, entries, tasks, smarts, cascadeSteps, descartes, eisenhower, threeP, coaching] = await Promise.all([
+      const [goals, entries, tasks, smarts, cascadeSteps, descartes, threeP, coaching] = await Promise.all([
         db.goals.toArray(),
         db.dailyEntries.toArray(),
         db.tasks.toArray(),
         db.ppSmarts.toArray(),
         db.actionSteps.toArray(),
         db.descartesSquares.toArray(),
-        db.eisenhowerItems.toArray(),
         db.threePResults.toArray(),
         db.coachingSessions.toArray(),
       ])
@@ -317,13 +315,13 @@ export function useAchievements() {
 
       if (descartes.length >= 1) await tryUnlock('first_descartes')
       if (descartes.length >= 5) await tryUnlock('descartes_5')
-      if (eisenhower.length >= 1) await tryUnlock('first_eisenhower')
       if (threeP.length >= 1) await tryUnlock('first_3p')
 
       const completedCoaching = coaching.filter(c => c.isCompleted)
       if (completedCoaching.length >= 1) await tryUnlock('first_coaching')
 
-      if (smarts.length > 0 && uniqueCascadeGoals > 0 && descartes.length > 0 && eisenhower.length > 0 && threeP.length > 0 && completedCoaching.length > 0) {
+      // Все 5 инструментов: SMART + Каскад + Декарт + 3П + Коучинг
+      if (smarts.length > 0 && uniqueCascadeGoals > 0 && descartes.length > 0 && threeP.length > 0 && completedCoaching.length > 0) {
         await tryUnlock('all_tools')
       }
 
