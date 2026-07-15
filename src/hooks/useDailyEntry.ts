@@ -26,6 +26,8 @@ function createEmptyEntry(date: string): DailyEntry {
   return {
     date,
     energyLevel: undefined,
+    energyEvening: undefined,
+    energyAnchor: '',
     morningIntention: '',
     morningGratitude: '',
     morningPriorities: ['', '', ''],
@@ -122,6 +124,14 @@ export function useDailyEntry(selectedDate: string) {
   // === ФУНКЦИИ обновления полей ===
   const updateEnergy = useCallback((value: number | undefined) => {
     setEntry(prev => ({ ...prev, energyLevel: value }))
+  }, [])
+
+  const updateEnergyEvening = useCallback((value: number | undefined) => {
+    setEntry(prev => ({ ...prev, energyEvening: value }))
+  }, [])
+
+  const updateAnchor = useCallback((value: string) => {
+    setEntry(prev => ({ ...prev, energyAnchor: value }))
   }, [])
 
   const updateIntention = useCallback((value: string) => {
@@ -370,6 +380,8 @@ export function useDailyEntry(selectedDate: string) {
     tasks,
     isLoading,
     updateEnergy,
+    updateEnergyEvening,
+    updateAnchor,
     updateIntention,
     updateGratitude,
     updatePriorities,

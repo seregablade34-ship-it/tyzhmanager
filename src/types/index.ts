@@ -72,7 +72,9 @@ export interface ActionStep {
 export interface DailyEntry {
   id?: number
   date: string            // Дата в формате "2026-01-15"
-  energyLevel?: number    // Уровень энергии 0-10
+  energyLevel?: number    // Уровень энергии 0-10 (утро — до 14:00)
+  energyEvening?: number  // Уровень энергии 0-10 (вечер — после 14:00)
+  energyAnchor?: string   // Энергетический якорь (1 слово — ощущение в теле)
   
   // Утренний блок
   morningIntention?: string    // Намерение на день
