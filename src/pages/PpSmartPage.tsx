@@ -39,6 +39,7 @@ export default function PpSmartPage() {
   const [editingPpSmart, setEditingPpSmart] = useState<PpSmart | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [mode, setMode] = useState<'linked' | 'free'>('linked')
+  const [relinkingId, setRelinkingId] = useState<number | null>(null)
 
   useEffect(() => {
     loadData()
@@ -77,6 +78,16 @@ export default function PpSmartPage() {
     }
     const g = goals.find(g => g.id === selectedGoalId)
     return g?.title || ''
+  }
+
+  function getLinkTitle(goalId: number): string {
+    if (!goalId || goalId === 0) return ''
+    if (goalId >= STRATEGY_OFFSET) {
+      const s = strategies.find(s => s.id === goalId - STRATEGY_OFFSET)
+      return s ? `🎯 Стратегия: «${s.title}»` : '⚠️ Стратегия удалена'
+    }
+    const g = goals.find(g => g.id === goalId)
+    return g ? `📋 Цель: «${g.title}»` : '⚠️ Цель удалена'
   }
 
   const currentPpSmart = mode === 'linked'
@@ -128,10 +139,25 @@ export default function PpSmartPage() {
         updatedAt: new Date().toISOString(),
       })
       await loadData()
+      setRelinkingId(null)
       setMode('linked')
       setSelectedGoalId(newGoalId)
     } catch (error) {
       console.error('Ошибка привязки:', error)
+    }
+  }
+
+  async function handleUnlink(ppSmartId: number) {
+    try {
+      await db.ppSmarts.update(ppSmartId, {
+        goalId: 0,
+        updatedAt: new Date().toISOString(),
+      })
+      await loadData()
+      setRelinkingId(null)
+      setMode('free')
+    } catch (error) {
+      console.error('Ошибка отвязки:', error)
     }
   }
 
@@ -162,7 +188,7 @@ export default function PpSmartPage() {
     setEditingPpSmart(null)
   }
 
-  // ═══ H.3: Создать ЦЕЛЬ НА ГОД из PP SMART ═══
+  // ═══ Создать ЦЕЛЬ НА ГОД из PP SMART ═══
   async function handleAddToGoals(ppSmart: PpSmart) {
     try {
       const formulation = generateFormulation(ppSmart)
@@ -182,7 +208,6 @@ export default function PpSmartPage() {
         updatedAt: now,
       })
 
-      // Привязать PP SMART к новой цели
       await db.ppSmarts.update(ppSmart.id!, {
         goalId: goalId as number,
         updatedAt: now,
@@ -196,7 +221,7 @@ export default function PpSmartPage() {
     }
   }
 
-  // ═══ H.3: Создать СТРАТЕГИЮ из PP SMART ═══
+  // ═══ Создать СТРАТЕГИЮ из PP SMART ═══
   async function handleAddToStrategy(ppSmart: PpSmart) {
     try {
       const formulation = generateFormulation(ppSmart)
@@ -231,25 +256,105 @@ export default function PpSmartPage() {
 
   const selectedTitle = getSelectedTitle()
 
+  // ═══ СПИСОК ЦЕЛЕЙ/СТРАТЕГИЙ ДЛЯ ПРИВЯЗКИ ═══
+  function renderLinkList(ppSmart: PpSmart) {
+    const hasTargets = goals.length > 0 || strategies.length > 0
+    if (!hasTargets) return null
+
+    return (
+      <div className="mt-4 bg-warning/5 border border-warning/20 rounded-lg p-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-medium text-text-light">🔗 Привязать к цели:</p>
+          {relinkingId === ppSmart.id && (
+            <button
+              onClick={() => setRelinkingId(null)}
+              className="text-xs text-text-light hover:text-text cursor-pointer"
+            >
+              ✕ Закрыть
+            </button>
+          )}
+        </div>
+        <div className="grid gap-1 max-h-40 overflow-y-auto">
+          {goals.map(g => (
+            <button
+              key={g.id}
+              onClick={() => handleLink(ppSmart.id!, g.id!)}
+              className={`text-left text-xs px-3 py-1.5 rounded-lg
+                         transition-colors cursor-pointer flex items-center gap-2
+                         ${ppSmart.goalId === g.id
+                           ? 'bg-primary/10 text-primary font-medium'
+                           : 'bg-bg hover:bg-primary/10 hover:text-primary'
+                         }`}
+            >
+              <span>📋 {g.title}</span>
+              <span className="text-text-light">{g.sphere}</span>
+              {ppSmart.goalId === g.id && <span className="ml-auto">✓</span>}
+            </button>
+          ))}
+          {strategies.map(s => (
+            <button
+              key={s.id! + STRATEGY_OFFSET}
+              onClick={() => handleLink(ppSmart.id!, s.id! + STRATEGY_OFFSET)}
+              className={`text-left text-xs px-3 py-1.5 rounded-lg
+                         transition-colors cursor-pointer flex items-center gap-2
+                         ${ppSmart.goalId === s.id! + STRATEGY_OFFSET
+                           ? 'bg-primary/10 text-primary font-medium'
+                           : 'bg-bg hover:bg-primary/10 hover:text-primary'
+                         }`}
+            >
+              <span>🎯 {s.title}</span>
+              <span className="text-warning">стратегия</span>
+              {ppSmart.goalId === s.id! + STRATEGY_OFFSET && <span className="ml-auto">✓</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   function renderPpSmartCard(ppSmart: PpSmart, linkedTitle?: string) {
     const formulation = generateFormulation(ppSmart)
     const isFree = !ppSmart.goalId || ppSmart.goalId === 0
+    const isRelinking = relinkingId === ppSmart.id
+
+    // Проверяем, жива ли привязка
+    const linkTitle = isFree ? '' : getLinkTitle(ppSmart.goalId)
+    const isOrphan = !isFree && linkTitle.startsWith('⚠️')
 
     return (
       <div key={ppSmart.id} className="bg-surface border border-border rounded-xl p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-semibold text-text text-lg">PP SMART</h2>
-            {linkedTitle && (
+            {linkedTitle && !isOrphan && (
               <p className="text-xs text-text-light mt-0.5">{linkedTitle}</p>
+            )}
+            {isOrphan && (
+              <p className="text-xs text-red-500 mt-0.5">{linkTitle}</p>
             )}
           </div>
           <div className="flex gap-1">
+            {/* Кнопка смены привязки */}
+            {!isFree && (
+              <button
+                onClick={() => setRelinkingId(isRelinking ? null : ppSmart.id!)}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg
+                           transition-colors cursor-pointer text-sm
+                           ${isRelinking
+                             ? 'text-primary bg-primary/10'
+                             : 'text-text-light hover:text-primary hover:bg-primary/10'
+                           }`}
+                title="Сменить привязку"
+              >
+                🔄
+              </button>
+            )}
             <button
               onClick={() => handleEdit(ppSmart)}
               className="w-8 h-8 flex items-center justify-center rounded-lg
                          text-text-light hover:text-primary hover:bg-primary/10
                          transition-colors cursor-pointer text-sm"
+              title="Редактировать"
             >
               ✏️
             </button>
@@ -258,6 +363,7 @@ export default function PpSmartPage() {
               className="w-8 h-8 flex items-center justify-center rounded-lg
                          text-text-light hover:text-danger hover:bg-danger/10
                          transition-colors cursor-pointer text-sm"
+              title="Удалить"
             >
               🗑️
             </button>
@@ -293,7 +399,7 @@ export default function PpSmartPage() {
           </div>
         )}
 
-{/* ═══ КНОПКИ: Создать цель / стратегию из PP SMART ═══ */}
+        {/* ═══ КНОПКИ: Создать цель/стратегию (для СВОБОДНЫХ) ═══ */}
         {isFree && formulation && (
           <div className="mt-4 bg-success/5 border-2 border-success/20 rounded-xl p-4">
             <p className="text-sm font-bold text-text mb-3">
@@ -323,34 +429,50 @@ export default function PpSmartPage() {
           </div>
         )}
 
-        {isFree && (goals.length > 0 || strategies.length > 0) && (
-          <div className="mt-4 bg-warning/5 border border-warning/20 rounded-lg p-3">
-            <p className="text-xs font-medium text-text-light mb-2">🔗 Привязать к цели:</p>
-            <div className="grid gap-1 max-h-32 overflow-y-auto">
-              {goals.map(g => (
-                <button
-                  key={g.id}
-                  onClick={() => handleLink(ppSmart.id!, g.id!)}
-                  className="text-left text-xs px-3 py-1.5 rounded-lg
-                             bg-bg hover:bg-primary/10 hover:text-primary
-                             transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  <span>📋 {g.title}</span>
-                  <span className="text-text-light">{g.sphere}</span>
-                </button>
-              ))}
-              {strategies.map(s => (
-                <button
-                  key={s.id! + STRATEGY_OFFSET}
-                  onClick={() => handleLink(ppSmart.id!, s.id! + STRATEGY_OFFSET)}
-                  className="text-left text-xs px-3 py-1.5 rounded-lg
-                             bg-bg hover:bg-primary/10 hover:text-primary
-                             transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  <span>🎯 {s.title}</span>
-                  <span className="text-warning">стратегия</span>
-                </button>
-              ))}
+        {/* ═══ ПРИВЯЗКА для СВОБОДНЫХ ═══ */}
+        {isFree && renderLinkList(ppSmart)}
+
+        {/* ═══ СМЕНА ПРИВЯЗКИ для ПРИВЯЗАННЫХ ═══ */}
+        {!isFree && isRelinking && (
+          <div className="mt-4">
+            {/* Кнопка отвязать */}
+            <button
+              onClick={() => handleUnlink(ppSmart.id!)}
+              className="w-full mb-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg
+                         hover:bg-red-100 transition-colors cursor-pointer
+                         font-medium text-sm flex items-center justify-center gap-2"
+            >
+              🔓 Отвязать (сделать свободным)
+            </button>
+
+            {/* Список для перепривязки */}
+            {renderLinkList(ppSmart)}
+          </div>
+        )}
+
+        {/* ═══ Предупреждение: привязка удалена ═══ */}
+        {isOrphan && !isRelinking && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-xs text-red-600 font-medium mb-2">
+              ⚠️ Цель/стратегия была удалена. Перепривяжите PP SMART:
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRelinkingId(ppSmart.id!)}
+                className="flex-1 px-3 py-2 bg-primary text-white rounded-lg
+                           hover:bg-primary-dark transition-colors cursor-pointer
+                           font-medium text-sm"
+              >
+                🔄 Привязать заново
+              </button>
+              <button
+                onClick={() => handleUnlink(ppSmart.id!)}
+                className="flex-1 px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg
+                           hover:bg-red-100 transition-colors cursor-pointer
+                           font-medium text-sm"
+              >
+                🔓 Сделать свободным
+              </button>
             </div>
           </div>
         )}
@@ -440,6 +562,7 @@ export default function PpSmartPage() {
                             setSelectedGoalId(goal.id!)
                             setShowForm(false)
                             setEditingPpSmart(null)
+                            setRelinkingId(null)
                           }}
                           className={`w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
                             flex items-center justify-between
@@ -481,6 +604,7 @@ export default function PpSmartPage() {
                             setSelectedGoalId(virtualId)
                             setShowForm(false)
                             setEditingPpSmart(null)
+                            setRelinkingId(null)
                           }}
                           className={`w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
                             flex items-center justify-between
