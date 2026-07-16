@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
-import { Download, Share2, X, Trophy, Flame, Target, Calendar } from 'lucide-react'
 
 interface ShareCardProps {
   isOpen: boolean
@@ -26,7 +25,7 @@ const SPHERE_COLORS: Record<string, string> = {
   'Духовность': '#a855f7',
 }
 
-export default function ShareCard({ isOpen, onClose, goal, combo = 0 }: ShareCardProps) {
+export default function ShareCard({ isOpen, onClose, goal }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
 
@@ -35,167 +34,79 @@ export default function ShareCard({ isOpen, onClose, goal, combo = 0 }: ShareCar
   const sphereColor = SPHERE_COLORS[goal.sphere] || '#3b82f6'
   const isCompleted = goal.status === 'completed'
 
-  // Скачать как PNG
   const handleDownload = async () => {
     if (!cardRef.current) return
     setSaving(true)
     try {
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
-        backgroundColor: null,
+        backgroundColor: '#ffffff',
         useCORS: true,
       })
       const link = document.createElement('a')
-      link.download = `цель-${goal.title.slice(0, 20)}.png`
+      link.download = `goal-${goal.title.slice(0, 20)}.png`
       link.href = canvas.toDataURL('image/png')
       link.click()
     } catch (e) {
-      console.error('Ошибка при создании картинки:', e)
+      console.error('Error creating image:', e)
     }
     setSaving(false)
   }
 
-  // Поделиться (если поддерживается)
   const handleShare = async () => {
     if (!cardRef.current) return
     setSaving(true)
     try {
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
-        backgroundColor: null,
+        backgroundColor: '#ffffff',
         useCORS: true,
       })
       canvas.toBlob(async (blob) => {
-        if (!blob) return
-        const file = new File([blob], 'цель.png', { type: 'image/png' })
+        if (!blob) { setSaving(false); return }
+        const file = new File([blob], 'goal.png', { type: 'image/png' })
         if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: '#тыжменеджер — моя цель',
-            text: `🎯 ${goal.title}`,
-            files: [file],
-          })
+          await navigator.share({ title: '#tyzhmanager', text: goal.title, files: [file] })
         } else {
-          // Если Share API не поддерживается — просто скачиваем
           handleDownload()
         }
         setSaving(false)
       })
     } catch (e) {
-      console.error('Ошибка шеринга:', e)
+      console.error('Share error:', e)
       setSaving(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 relative">
-        {/* Кнопка закрытия */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition"
-        >
-          <X size={20} className="text-gray-500" />
-        </button>
-
-        <h3 className="text-lg font-bold text-center mb-4 text-[var(--app-text)]">
-          📸 Поделиться целью
-        </h3>
-
-        {/* ═══ КАРТОЧКА ДЛЯ СКРИНШОТА ═══ */}
-        <div
-          ref={cardRef}
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: `linear-gradient(135deg, ${sphereColor}22, ${sphereColor}44)`,
-            border: `2px solid ${sphereColor}66`,
-          }}
-        >
-          <div className="p-6">
-            {/* Верхняя полоска с брендом */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Target size={18} style={{ color: sphereColor }} />
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                  style={{ backgroundColor: sphereColor }}
-                >
-                  {goal.sphere}
-                </span>
-              </div>
-              {isCompleted && (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-500 text-white flex items-center gap-1">
-                  <Trophy size={12} /> Достигнута!
-                </span>
-              )}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: '16px' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '420px', width: '100%', padding: '24px', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', width: '32px', height: '32px', border: 'none', background: '#f3f4f6', borderRadius: '50%', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>X</button>
+        <h3 style={{ fontSize: '18px', fontWeight: 700, textAlign: 'center', marginBottom: '16px', color: '#1f2937' }}>Поделиться целью</h3>
+        <div ref={cardRef} style={{ borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f0f5ff', border: '2px solid #dbeafe', padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, padding: '2px 10px', borderRadius: '999px', color: '#ffffff', backgroundColor: sphereColor }}>{goal.sphere}</span>
+            {isCompleted && (<span style={{ fontSize: '12px', fontWeight: 700, padding: '2px 10px', borderRadius: '999px', color: '#ffffff', backgroundColor: '#22c55e' }}>Достигнута!</span>)}
+          </div>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', marginBottom: '16px', lineHeight: 1.3 }}>{goal.title}</h2>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '4px' }}>
+              <span style={{ color: '#4b5563', fontWeight: 500 }}>Прогресс</span>
+              <span style={{ fontWeight: 700, color: sphereColor }}>{goal.progress}%</span>
             </div>
-
-            {/* Название цели */}
-            <h2 className="text-xl font-bold text-gray-900 mb-4 leading-tight">
-              🎯 {goal.title}
-            </h2>
-
-            {/* Прогресс-бар */}
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600 font-medium">Прогресс</span>
-                <span className="font-bold" style={{ color: sphereColor }}>
-                  {goal.progress}%
-                </span>
-              </div>
-              <div className="h-3 bg-white/60 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${goal.progress}%`,
-                    backgroundColor: sphereColor,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Инфо-строка */}
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <Calendar size={14} />
-                <span>{goal.year}</span>
-              </div>
-              {combo > 0 && (
-                <div className="flex items-center gap-1">
-                  <Flame size={14} className="text-orange-500" />
-                  <span className="font-medium">Комбо: {combo} дн.</span>
-                </div>
-              )}
-            </div>
-
-            {/* Бренд */}
-            <div className="mt-4 pt-3 border-t border-gray-300/40 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-gray-800">#тыжменеджер</p>
-                <p className="text-xs text-gray-500">дневник целей</p>
-              </div>
-              <p className="text-xs text-gray-400">t.me/degtayrevtrener</p>
+            <div style={{ height: '12px', backgroundColor: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: '999px', width: `${goal.progress}%`, backgroundColor: sphereColor }} />
             </div>
           </div>
+          <div style={{ fontSize: '14px', color: '#4b5563', marginBottom: '16px' }}>{goal.year}</div>
+          <div style={{ paddingTop: '12px', borderTop: '1px solid #d1d5db', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div><p style={{ fontSize: '14px', fontWeight: 700, color: '#1f2937', margin: 0 }}>#тыжменеджер</p><p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>дневник целей</p></div>
+            <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>t.me/degtayrevtrener</p>
+          </div>
         </div>
-
-        {/* Кнопки */}
-        <div className="flex gap-3 mt-4">
-          <button
-            onClick={handleDownload}
-            disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            <Download size={18} />
-            {saving ? 'Сохраняю...' : 'Скачать PNG'}
-          </button>
-          <button
-            onClick={handleShare}
-            disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition disabled:opacity-50"
-          >
-            <Share2 size={18} />
-            Поделиться
-          </button>
+        <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+          <button onClick={handleDownload} disabled={saving} style={{ flex: 1, backgroundColor: '#2563eb', color: '#ffffff', padding: '12px', borderRadius: '12px', fontWeight: 500, fontSize: '14px', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1 }}>{saving ? 'Сохраняю...' : 'Скачать PNG'}</button>
+          <button onClick={handleShare} disabled={saving} style={{ flex: 1, backgroundColor: '#16a34a', color: '#ffffff', padding: '12px', borderRadius: '12px', fontWeight: 500, fontSize: '14px', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1 }}>Поделиться</button>
         </div>
       </div>
     </div>
