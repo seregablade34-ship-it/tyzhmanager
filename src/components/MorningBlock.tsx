@@ -16,7 +16,6 @@ export default function MorningBlock({
   onPrioritiesChange,
 }: MorningBlockProps) {
 
-  // Обновить конкретный приоритет по индексу
   function updatePriority(index: number, value: string) {
     const updated = [...priorities]
     updated[index] = value
@@ -24,7 +23,7 @@ export default function MorningBlock({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-4">
+    <div className="bg-surface border border-border rounded-xl p-4 overflow-hidden">
       <h2 className="font-semibold text-text mb-4">🌅 Утренний блок</h2>
 
       {/* Намерение на день */}
@@ -62,13 +61,13 @@ export default function MorningBlock({
       </div>
 
       {/* Приоритеты на день (до 3) */}
-      <div>
+      <div className="overflow-hidden">
         <label className="block text-sm font-medium text-text-light mb-1">
           🔥 Топ-3 приоритета на день
         </label>
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-bold text-primary w-5 text-center">
+          <div key={index} className="flex items-center gap-2 mb-2 min-w-0">
+            <span className="text-sm font-bold text-primary w-5 text-center flex-shrink-0">
               {index + 1}
             </span>
             <input
@@ -76,7 +75,7 @@ export default function MorningBlock({
               value={priorities[index] || ''}
               onChange={(e) => updatePriority(index, e.target.value)}
               placeholder={`Приоритет ${index + 1}`}
-              className="flex-1 px-3 py-2 rounded-lg border border-border
+              className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-border
                          bg-bg text-text placeholder-text-light/50
                          focus:outline-none focus:ring-2 focus:ring-primary/30
                          focus:border-primary transition-colors"
