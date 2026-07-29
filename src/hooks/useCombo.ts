@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { dailyEntriesTable } from '../api/helpers'
 
 export interface ComboData {
   currentCombo: number
@@ -9,7 +9,7 @@ export interface ComboData {
 }
 
 function isEntryFilled(entry: {
-  energy?: number
+  energyLevel?: number
   morningIntention?: string
   morningGratitude?: string
   eveningWin?: string
@@ -17,7 +17,7 @@ function isEntryFilled(entry: {
 } | undefined): boolean {
   if (!entry) return false
   return !!(
-    (entry.energy && entry.energy > 0) ||
+    (entry.energyLevel && entry.energyLevel > 0) ||
     entry.morningIntention?.trim() ||
     entry.morningGratitude?.trim() ||
     entry.eveningWin?.trim() ||
@@ -44,7 +44,7 @@ export function useCombo(): ComboData {
 
   async function calculateCombo() {
     try {
-      const entries = await db.dailyEntries.toArray()
+      const entries = await dailyEntriesTable.getAll()
       const filledDates = new Set<string>()
       entries.forEach(entry => {
         if (isEntryFilled(entry)) {

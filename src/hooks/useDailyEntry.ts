@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { db } from '../db/database'
+import { dailyEntriesTable, tasksTable } from '../api/helpers'
 import type { DailyEntry, Task, TaskStatus, TaskPriority, TaskTag } from '../types'
 
 // Подзадача для UI
@@ -64,10 +64,7 @@ export function useDailyEntry(selectedDate: string) {
     async function loadData() {
       setIsLoading(true)
       try {
-        const existing = await db.dailyEntries
-          .where('date')
-          .equals(selectedDate)
-          .first()
+        const existing = await dailyEntriesTable.getOneWhere('date', selectedDate)
 
         if (cancelled) return
 
@@ -77,10 +74,7 @@ export function useDailyEntry(selectedDate: string) {
           setEntry(createEmptyEntry(selectedDate))
         }
 
-        const dayTasks = await db.tasks
-          .where('date')
-          .equals(selectedDate)
-          .toArray()
+        const dayTasks = await tasksTable.getWhere('date', selectedDate)
 
         if (cancelled) return
         setTasks(dayTasks.map(dbTaskToUI))
@@ -112,7 +106,7 @@ export function useDailyEntry(selectedDate: string) {
           date: selectedDate,
           updatedAt: new Date().toISOString(),
         }
-        await db.dailyEntries.put(toSave)
+        await dailyEntriesTable.put(toSave)
       } catch (error) {
         console.error('Ошибка сохранения записи:', error)
       }
@@ -175,9 +169,9 @@ export function useDailyEntry(selectedDate: string) {
         createdAt: now,
         updatedAt: now,
       }
-      const id = await db.tasks.add(newTask)
+      const created = await tasksTable.create(newTask)
       setTasks(prev => [...prev, {
-        id: id as number,
+        id: created.id!,
         title,
         status: 'not-started' as TaskStatus,
         priority: 'medium' as TaskPriority,
@@ -192,10 +186,10 @@ export function useDailyEntry(selectedDate: string) {
   // Сменить статус
   const updateTaskStatus = useCallback(async (taskId: number, status: TaskStatus) => {
     try {
-      await db.tasks.update(taskId, {
+      await tasksTable.update(taskId, {
         status,
         updatedAt: new Date().toISOString(),
-      })
+      } as Partial<Task>)
       setTasks(prev =>
         prev.map(t => t.id === taskId ? { ...t, status } : t)
       )
@@ -207,10 +201,10 @@ export function useDailyEntry(selectedDate: string) {
   // Сменить приоритет
   const updateTaskPriority = useCallback(async (taskId: number, priority: TaskPriority) => {
     try {
-      await db.tasks.update(taskId, {
+      await tasksTable.update(taskId, {
         priority,
         updatedAt: new Date().toISOString(),
-      })
+      } as Partial<Task>)
       setTasks(prev =>
         prev.map(t => t.id === taskId ? { ...t, priority } : t)
       )
@@ -222,10 +216,10 @@ export function useDailyEntry(selectedDate: string) {
   // Сменить тег
   const updateTaskTag = useCallback(async (taskId: number, tag: TaskTag | undefined) => {
     try {
-      await db.tasks.update(taskId, {
+      await tasksTable.update(taskId, {
         tag,
         updatedAt: new Date().toISOString(),
-      })
+      } as Partial<Task>)
       setTasks(prev =>
         prev.map(t => t.id === taskId ? { ...t, tag } : t)
       )
@@ -237,10 +231,10 @@ export function useDailyEntry(selectedDate: string) {
   // Сменить время на задачу
   const updateTaskDuration = useCallback(async (taskId: number, duration: number) => {
     try {
-      await db.tasks.update(taskId, {
+      await tasksTable.update(taskId, {
         duration,
         updatedAt: new Date().toISOString(),
-      })
+      } as Partial<Task>)
       setTasks(prev =>
         prev.map(t => t.id === taskId ? { ...t, duration } : t)
       )
@@ -252,7 +246,7 @@ export function useDailyEntry(selectedDate: string) {
   // Удалить задачу
   const deleteTask = useCallback(async (taskId: number) => {
     try {
-      await db.tasks.delete(taskId)
+      await tasksTable.remove(taskId)
       setTasks(prev => prev.filter(t => t.id !== taskId))
     } catch (error) {
       console.error('Ошибка удаления задачи:', error)
@@ -281,9 +275,9 @@ export function useDailyEntry(selectedDate: string) {
         createdAt: now,
         updatedAt: now,
       }
-      const id = await db.tasks.add(newTask)
+      const created = await tasksTable.create(newTask)
       setTasks(prev => [...prev, {
-        id: id as number,
+        id: created.id!,
         title: taskData.title,
         status: taskData.status,
         priority: taskData.priority,
@@ -299,7 +293,7 @@ export function useDailyEntry(selectedDate: string) {
   // Добавить подзадачу
   const addSubtask = useCallback(async (taskId: number, title: string) => {
     try {
-      const task = await db.tasks.get(taskId)
+      const task = await tasksTable.getById(taskId)
       if (!task) return
 
       const newSubtask: SubTaskItem = {
@@ -309,10 +303,10 @@ export function useDailyEntry(selectedDate: string) {
       }
 
       const updatedSubtasks = [...(task.subtasks || []), newSubtask]
-      await db.tasks.update(taskId, {
+      await tasksTable.update(taskId, {
         subtasks: updatedSubtasks,
         updatedAt: new Date().toISOString(),
-      })
+      } as Partial<Task>)
 
       setTasks(prev =>
         prev.map(t => t.id === taskId
@@ -328,17 +322,17 @@ export function useDailyEntry(selectedDate: string) {
   // Переключить подзадачу
   const toggleSubtask = useCallback(async (taskId: number, subtaskId: string) => {
     try {
-      const task = await db.tasks.get(taskId)
+      const task = await tasksTable.getById(taskId)
       if (!task) return
 
       const updatedSubtasks = (task.subtasks || []).map(s =>
         s.id === subtaskId ? { ...s, isCompleted: !s.isCompleted } : s
       )
 
-      await db.tasks.update(taskId, {
+      await tasksTable.update(taskId, {
         subtasks: updatedSubtasks,
         updatedAt: new Date().toISOString(),
-      })
+      } as Partial<Task>)
 
       setTasks(prev =>
         prev.map(t => t.id === taskId
@@ -354,15 +348,15 @@ export function useDailyEntry(selectedDate: string) {
   // Удалить подзадачу
   const deleteSubtask = useCallback(async (taskId: number, subtaskId: string) => {
     try {
-      const task = await db.tasks.get(taskId)
+      const task = await tasksTable.getById(taskId)
       if (!task) return
 
       const updatedSubtasks = (task.subtasks || []).filter(s => s.id !== subtaskId)
 
-      await db.tasks.update(taskId, {
+      await tasksTable.update(taskId, {
         subtasks: updatedSubtasks,
         updatedAt: new Date().toISOString(),
-      })
+      } as Partial<Task>)
 
       setTasks(prev =>
         prev.map(t => t.id === taskId

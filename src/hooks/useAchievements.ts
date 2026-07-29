@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { db } from '../db/database'
+import {
+  achievementsTable, goalsTable, dailyEntriesTable,
+  tasksTable, ppSmartsTable, actionStepsTable,
+  descartesTable, threePTable, coachingTable,
+  strategiesTable, transfersTable,
+} from '../api/helpers'
+import type { Achievement } from '../types'
 
 // ==========================================
 // ОПРЕДЕЛЕНИЯ ДОСТИЖЕНИЙ
@@ -142,8 +148,8 @@ export function getXpProgress(xp: number): { current: number; needed: number; pe
 
 async function countPerfectDays(): Promise<number> {
   try {
-    const entries = await db.dailyEntries.toArray()
-    const tasks = await db.tasks.toArray()
+    const entries = await dailyEntriesTable.getAll()
+    const tasks = await tasksTable.getAll()
 
     let perfectCount = 0
 
@@ -176,7 +182,7 @@ export function useAchievements() {
 
   async function loadUnlocked() {
     try {
-      const achievements = await db.achievements.toArray()
+      const achievements = await achievementsTable.getAll()
       const result: UnlockedAchievement[] = []
       let xp = 0
 
@@ -201,10 +207,7 @@ export function useAchievements() {
 
   const tryUnlock = useCallback(async (achievementId: string): Promise<boolean> => {
     try {
-      const existing = await db.achievements
-        .where('type')
-        .equals(achievementId)
-        .first()
+      const existing = await achievementsTable.getOneWhere('type', achievementId)
 
       if (existing?.isUnlocked) return false
 
@@ -214,12 +217,12 @@ export function useAchievements() {
       const now = new Date().toISOString()
 
       if (existing) {
-        await db.achievements.update(existing.id!, {
+        await achievementsTable.update(existing.id!, {
           isUnlocked: true,
           unlockedAt: now,
-        })
+        } as Partial<Achievement>)
       } else {
-        await db.achievements.add({
+        await achievementsTable.create({
           type: achievementId,
           title: def.title,
           description: def.description,
@@ -245,18 +248,18 @@ export function useAchievements() {
   const checkAll = useCallback(async (comboCount: number) => {
     try {
       const [goals, entries, tasks, smarts, cascadeSteps, descartes, threeP, coaching] = await Promise.all([
-        db.goals.toArray(),
-        db.dailyEntries.toArray(),
-        db.tasks.toArray(),
-        db.ppSmarts.toArray(),
-        db.actionSteps.toArray(),
-        db.descartesSquares.toArray(),
-        db.threePResults.toArray(),
-        db.coachingSessions.toArray(),
+        goalsTable.getAll(),
+        dailyEntriesTable.getAll(),
+        tasksTable.getAll(),
+        ppSmartsTable.getAll(),
+        actionStepsTable.getAll(),
+        descartesTable.getAll(),
+        threePTable.getAll(),
+        coachingTable.getAll(),
       ])
 
-      const strategies = await db.strategies.toArray()
-      const transfers = await db.taskTransfers.toArray()
+      const strategies = await strategiesTable.getAll()
+      const transfers = await transfersTable.getAll()
 
       // 🔥 КОМБО
       if (comboCount >= 3)   await tryUnlock('combo_3')
@@ -349,7 +352,7 @@ export function useAchievements() {
 
       // 🏆 СЕКРЕТНОЕ: все бейджи (кроме самого секретного) открыты
       const allNonSecret = ACHIEVEMENTS.filter(a => a.category !== 'secret')
-      const unlockedAll = await db.achievements.toArray()
+      const unlockedAll = await achievementsTable.getAll()
       const unlockedIds = new Set(unlockedAll.filter(a => a.isUnlocked).map(a => a.type))
       const allRegularUnlocked = allNonSecret.every(a => unlockedIds.has(a.id))
       if (allRegularUnlocked) await tryUnlock('secret_tyzhmanager')
