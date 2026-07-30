@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { db } from '../db/database'
+import { dailyEntriesTable } from '../api/helpers'
 
 interface EnergyScaleProps {
   value: number | undefined
@@ -70,7 +70,7 @@ export default function EnergyScale({
 
   async function loadHistory() {
     try {
-      const entries = await db.dailyEntries.toArray()
+      const entries = await dailyEntriesTable.getAll()
       const today = new Date()
       const days: { date: string; energy: number | null }[] = []
 
@@ -243,7 +243,7 @@ export default function EnergyScale({
         </div>
       </div>
 
-      {/* ═══ ДЕТАЛИ — РАСКРЫВАЮТСЯ ПО КЛИКУ ═══ */}
+      {/* ═══ ДЕТАЛИ РАСКРЫВАЮТСЯ ПО КЛИКУ ═══ */}
       {detailsOpen && (
         <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
 

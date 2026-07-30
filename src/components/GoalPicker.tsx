@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { strategiesTable, goalsTable } from '../api/helpers'
 import type { Goal, Strategy } from '../types'
 
 interface GoalPickerProps {
@@ -29,11 +29,11 @@ export default function GoalPicker({
 
   async function loadData() {
     if (sources.includes('strategies')) {
-      const s = await db.strategies.toArray()
-      setStrategies(s.filter(s => (s.status || 'active') === 'active'))
+      const s = await strategiesTable.getAll()
+      setStrategies(s.filter(s => ((s as any).status || 'active') === 'active'))
     }
     if (sources.includes('goals')) {
-      const g = await db.goals.toArray()
+      const g = await goalsTable.getAll()
       setGoals(g.filter(g => (g.status || 'active') === 'active'))
     }
   }

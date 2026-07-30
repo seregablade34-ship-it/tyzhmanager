@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
-import type { ThreePResult, ThreePPriority } from '../types'
+import { threePTable } from '../api/helpers'
+import type { ThreePPriority } from '../types'
 
 interface Props {
   goalId: number
@@ -86,10 +86,8 @@ export default function ThreePForm({ goalId, goalTitle, onBack }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        const existing = await db.threePResults
-          .where('goalId')
-          .equals(goalId)
-          .first()
+        const results = await threePTable.getWhere('goalId', goalId)
+        const existing = results[0]
 
         if (existing) {
           setAnswers({
@@ -133,22 +131,21 @@ export default function ThreePForm({ goalId, goalTitle, onBack }: Props) {
     try {
       const now = new Date().toISOString()
 
-      const record: ThreePResult = {
+      const saveData: Record<string, any> = {
         goalId,
         approaching: answers.approaching!,
         consequences: answers.consequences!,
         profit: answers.profit!,
         priority: result.priority,
-        createdAt: now,
         updatedAt: now,
       }
 
       if (existingId) {
-        record.id = existingId
-        await db.threePResults.put(record)
+        await threePTable.update(existingId, saveData)
       } else {
-        const id = await db.threePResults.add(record)
-        setExistingId(id as number)
+        saveData.createdAt = now
+        const created = await threePTable.create(saveData)
+        setExistingId(created.id as number)
       }
 
       setIsSaved(true)

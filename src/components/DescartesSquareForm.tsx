@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
-import type { DescartesSquare } from '../types'
+import { descartesTable } from '../api/helpers'
 
 interface Props {
   goalId: number
@@ -31,10 +30,8 @@ export default function DescartesSquareForm({ goalId, goalTitle, onBack }: Props
   useEffect(() => {
     async function load() {
       try {
-        const existing = await db.descartesSquares
-          .where('goalId')
-          .equals(goalId)
-          .first()
+        const results = await descartesTable.getWhere('goalId', goalId)
+        const existing = results[0]
 
         if (existing) {
           setData({
@@ -106,23 +103,24 @@ export default function DescartesSquareForm({ goalId, goalTitle, onBack }: Props
     try {
       const now = new Date().toISOString()
 
-      const record: DescartesSquare = {
+      const saveData: Record<string, any> = {
         goalId,
         doPositive: data.doPositive.filter(a => a.trim()),
         dontNegative: data.dontNegative.filter(a => a.trim()),
         doNegative: data.doNegative.filter(a => a.trim()),
         dontPositive: data.dontPositive.filter(a => a.trim()),
-        recommendation: 'do',  // Поле оставляем для совместимости, не используем
-        createdAt: now,
+        recommendation: 'do',
         updatedAt: now,
       }
 
       if (existingId) {
-        record.id = existingId
-        await db.descartesSquares.put(record)
+        await descartesTable.update(existingId, saveData)
       } else {
-        const id = await db.descartesSquares.add(record)
-        setExistingId(id as number)
+        const created = await descartesTable.create({
+          ...saveData,
+          createdAt: now,
+        })
+        setExistingId(created.id as number)
       }
 
       setIsSaved(true)

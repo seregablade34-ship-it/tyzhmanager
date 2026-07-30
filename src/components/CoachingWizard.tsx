@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
-import type { CoachingSession } from '../types'
-
+import { coachingTable } from '../api/helpers'
 interface Props {
   goalId: number
   goalTitle: string
@@ -55,7 +53,7 @@ const QUESTIONS = [
     hint: 'Конкретные действия с конкретными сроками.',
   },
   {
-    emoji: '💎',
+    emoji: '👌',
     question: 'Какой главный вывод ты сделал?',
     hint: 'Одно ключевое осознание после этого размышления.',
   },
@@ -72,14 +70,12 @@ export default function CoachingWizard({ goalId, goalTitle, onBack }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        const existing = await db.coachingSessions
-          .where('goalId')
-          .equals(goalId)
-          .first()
+        const results = await coachingTable.getWhere('goalId', goalId)
+        const existing = results[0]
 
         if (existing) {
           const loadedAnswers = [...Array(10).fill('')]
-          existing.answers.forEach((a, i) => {
+          existing.answers.forEach((a: string, i: number) => {
             if (i < 10) loadedAnswers[i] = a
           })
           setAnswers(loadedAnswers)
@@ -109,21 +105,22 @@ export default function CoachingWizard({ goalId, goalTitle, onBack }: Props) {
     try {
       const now = new Date().toISOString()
 
-      const record: CoachingSession = {
+      const data = {
         goalId,
         answers: answers.filter(a => a.trim()),
         currentStep: step,
         isCompleted: completed,
-        createdAt: now,
         updatedAt: now,
       }
 
       if (existingId) {
-        record.id = existingId
-        await db.coachingSessions.put(record)
+        await coachingTable.update(existingId, data)
       } else {
-        const id = await db.coachingSessions.add(record)
-        setExistingId(id as number)
+        const created = await coachingTable.create({
+          ...data,
+          createdAt: now,
+        })
+        setExistingId(created.id as number)
       }
     } catch (error) {
       console.error('Ошибка автосохранения:', error)
@@ -162,7 +159,7 @@ export default function CoachingWizard({ goalId, goalTitle, onBack }: Props) {
 
     if (existingId) {
       try {
-        await db.coachingSessions.delete(existingId)
+        await coachingTable.remove(existingId)
         setExistingId(null)
       } catch (error) {
         console.error('Ошибка удаления:', error)
@@ -220,7 +217,7 @@ export default function CoachingWizard({ goalId, goalTitle, onBack }: Props) {
 
         {/* Вдохновение */}
         <div className="border-2 border-primary/20 bg-primary/5 rounded-xl p-6 text-center mb-6">
-          <p className="text-3xl mb-3">💎</p>
+          <p className="text-3xl mb-3">👌</p>
           <h3 className="text-lg font-bold text-text mb-2">
             Ваши ответы сохранены
           </h3>

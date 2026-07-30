@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { reflectionsTable } from '../api/helpers'
 import type { GoalReflection } from '../types'
 
 interface Props {
-  // Что завершаем — цель или стратегию
   goalId?: number
   strategyId?: number
   title: string
@@ -75,15 +74,11 @@ export default function ReflectionModal({
         let existing: GoalReflection | undefined
 
         if (goalId) {
-          existing = await db.goalReflections
-            .where('goalId')
-            .equals(goalId)
-            .first()
+          const results = await reflectionsTable.getWhere('goalId', goalId)
+          existing = results[0]
         } else if (strategyId) {
-          existing = await db.goalReflections
-            .where('strategyId')
-            .equals(strategyId)
-            .first()
+          const results = await reflectionsTable.getWhere('strategyId', strategyId)
+          existing = results[0]
         }
 
         if (existing) {
@@ -118,39 +113,39 @@ export default function ReflectionModal({
     try {
       const now = new Date().toISOString()
 
-      const reflection: GoalReflection = {
+      const saveData: Record<string, any> = {
         goalId,
         strategyId,
         type,
-        createdAt: now,
         updatedAt: now,
       }
 
       // Заполняем ответы в зависимости от типа
       if (type === 'completed') {
-        reflection.whatWorked = answers.whatWorked || ''
-        reflection.whatLearned = answers.whatLearned || ''
-        reflection.whatNext = answers.whatNext || ''
+        saveData.whatWorked = answers.whatWorked || ''
+        saveData.whatLearned = answers.whatLearned || ''
+        saveData.whatNext = answers.whatNext || ''
       } else {
-        reflection.whatPrevented = answers.whatPrevented || ''
-        reflection.whatWouldChange = answers.whatWouldChange || ''
-        reflection.isStillRelevant = answers.isStillRelevant || ''
+        saveData.whatPrevented = answers.whatPrevented || ''
+        saveData.whatWouldChange = answers.whatWouldChange || ''
+        saveData.isStillRelevant = answers.isStillRelevant || ''
       }
 
       // Проверяем, есть ли уже рефлексия
       let existing: GoalReflection | undefined
       if (goalId) {
-        existing = await db.goalReflections.where('goalId').equals(goalId).first()
+        const results = await reflectionsTable.getWhere('goalId', goalId)
+        existing = results[0]
       } else if (strategyId) {
-        existing = await db.goalReflections.where('strategyId').equals(strategyId).first()
+        const results = await reflectionsTable.getWhere('strategyId', strategyId)
+        existing = results[0]
       }
 
       if (existing) {
-        reflection.id = existing.id
-        reflection.createdAt = existing.createdAt
-        await db.goalReflections.put(reflection)
+        await reflectionsTable.update(existing.id!, saveData)
       } else {
-        await db.goalReflections.add(reflection)
+        saveData.createdAt = now
+        await reflectionsTable.create(saveData)
       }
 
       onSave()
