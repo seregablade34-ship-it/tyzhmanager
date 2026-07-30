@@ -1,5 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { db } from '../db/database'
+import {
+  dailyEntriesTable, tasksTable, goalsTable, strategiesTable,
+  ppSmartsTable, actionStepsTable, descartesTable,
+  threePTable, coachingTable, transfersTable,
+} from '../api/helpers'
 import { useCombo } from '../hooks/useCombo'
 import { useAchievements } from '../hooks/useAchievements'
 import {
@@ -139,16 +143,16 @@ export default function StatsPage() {
   // ─── Загрузка ВСЕХ данных (авто-обновление) ───
   const loadAll = useCallback(async () => {
     const [de, t, g, s, pp, as2, ds, tp, cs, tt] = await Promise.all([
-      db.dailyEntries.toArray(),
-      db.tasks.toArray(),
-      db.goals.toArray(),
-      db.strategies.toArray(),
-      db.ppSmarts.toArray(),
-      db.actionSteps.toArray(),
-      db.descartesSquares.toArray(),
-      db.threePResults.toArray(),
-      db.coachingSessions.toArray(),
-      db.taskTransfers.toArray(),
+      dailyEntriesTable.getAll(),
+      tasksTable.getAll(),
+      goalsTable.getAll(),
+      strategiesTable.getAll(),
+      ppSmartsTable.getAll(),
+      actionStepsTable.getAll(),
+      descartesTable.getAll(),
+      threePTable.getAll(),
+      coachingTable.getAll(),
+      transfersTable.getAll(),
     ])
     setDailyEntries(de)
     setTasks(t)

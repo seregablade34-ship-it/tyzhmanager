@@ -1,7 +1,31 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import {
+  dailyEntriesTable, tasksTable, goalsTable, strategiesTable,
+  ppSmartsTable, actionStepsTable, descartesTable,
+  threePTable, coachingTable, achievementsTable, combosTable,
+  transfersTable, reflectionsTable, evalTable, settingsTable,
+} from '../api/helpers'
 
 type ThemeMode = 'light' | 'dark' | 'system'
+
+// Маппинг имён для экспорта/импорта
+const ALL_TABLES = [
+  { name: 'dailyEntries', table: dailyEntriesTable },
+  { name: 'tasks', table: tasksTable },
+  { name: 'goals', table: goalsTable },
+  { name: 'strategies', table: strategiesTable },
+  { name: 'ppSmarts', table: ppSmartsTable },
+  { name: 'actionSteps', table: actionStepsTable },
+  { name: 'descartesSquares', table: descartesTable },
+  { name: 'threePResults', table: threePTable },
+  { name: 'coachingSessions', table: coachingTable },
+  { name: 'achievements', table: achievementsTable },
+  { name: 'combos', table: combosTable },
+  { name: 'taskTransfers', table: transfersTable },
+  { name: 'goalReflections', table: reflectionsTable },
+  { name: 'goalEvaluations', table: evalTable },
+  { name: 'userSettings', table: settingsTable },
+]
 
 export default function SettingsPage() {
   const [userName, setUserName] = useState(() => {
@@ -25,7 +49,6 @@ export default function SettingsPage() {
     } else if (theme === 'light') {
       root.classList.remove('dark')
     } else {
-      // system
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       if (prefersDark) {
         root.classList.add('dark')
@@ -80,15 +103,13 @@ export default function SettingsPage() {
       showStatus('⏳ Экспортируем...')
 
       const data: Record<string, any> = {}
-      const tables = [
-        'dailyEntries', 'tasks', 'goals', 'strategies',
-        'ppSmarts', 'actionSteps', 'descartesSquares',
-        'eisenhowerItems', 'threePResults', 'coachingSessions',
-        'achievements', 'combos',
-      ]
 
-      for (const table of tables) {
-        data[table] = await (db as any)[table].toArray()
+      for (const { name, table } of ALL_TABLES) {
+        try {
+          data[name] = await table.getAll()
+        } catch {
+          data[name] = []
+        }
       }
 
       data._localStorage = {
@@ -131,17 +152,18 @@ export default function SettingsPage() {
         return
       }
 
-      const tables = [
-        'dailyEntries', 'tasks', 'goals', 'strategies',
-        'ppSmarts', 'actionSteps', 'descartesSquares',
-        'eisenhowerItems', 'threePResults', 'coachingSessions',
-        'achievements', 'combos',
-      ]
-
-      for (const table of tables) {
-        if (data[table] && Array.isArray(data[table])) {
-          await (db as any)[table].clear()
-          await (db as any)[table].bulkAdd(data[table])
+      for (const { name, table } of ALL_TABLES) {
+        if (data[name] && Array.isArray(data[name])) {
+          // Удаляем все существующие записи
+          const existing = await table.getAll()
+          for (const item of existing) {
+            if (item.id) await table.remove(item.id)
+          }
+          // Добавляем импортированные
+          for (const item of data[name]) {
+            const { id, ...rest } = item
+            await table.create(rest)
+          }
         }
       }
 
@@ -172,15 +194,15 @@ export default function SettingsPage() {
   // ─── Очистка данных ───
   async function handleReset() {
     try {
-      const tables = [
-        'dailyEntries', 'tasks', 'goals', 'strategies',
-        'ppSmarts', 'actionSteps', 'descartesSquares',
-        'eisenhowerItems', 'threePResults', 'coachingSessions',
-        'achievements', 'combos',
-      ]
-
-      for (const table of tables) {
-        await (db as any)[table].clear()
+      for (const { table } of ALL_TABLES) {
+        try {
+          const existing = await table.getAll()
+          for (const item of existing) {
+            if (item.id) await table.remove(item.id)
+          }
+        } catch {
+          // Таблица может быть пустой
+        }
       }
 
       localStorage.removeItem('tyzhmanager_username')
@@ -353,7 +375,7 @@ export default function SettingsPage() {
               ⚠️ Вы уверены? Все цели, задачи, записи и достижения будут удалены!
             </p>
             <p className="text-xs text-text-light mb-4">
-              Рекомендуем сначала скачать копию данных ☝️
+              Рекомендуем сначала скачать копию данных ☀️
             </p>
             <div className="flex gap-2">
               <button
