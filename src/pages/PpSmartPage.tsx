@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { goalsTable, strategiesTable, ppSmartsTable } from '../api/helpers'
 import type { Goal, Strategy, PpSmart } from '../types'
 import PpSmartForm from '../components/PpSmartForm'
 
@@ -48,9 +48,9 @@ export default function PpSmartPage() {
   async function loadData() {
     try {
       const [goalsData, strategiesData, ppSmartsData] = await Promise.all([
-        db.goals.orderBy('order').toArray(),
-        db.strategies.orderBy('order').toArray(),
-        db.ppSmarts.toArray(),
+        goalsTable.getAll('order'),
+        strategiesTable.getAll('order'),
+        ppSmartsTable.getAll(),
       ])
       setGoals(goalsData)
       setStrategies(strategiesData)
@@ -110,13 +110,13 @@ export default function PpSmartPage() {
       const now = new Date().toISOString()
 
       if (editingPpSmart) {
-        await db.ppSmarts.update(editingPpSmart.id!, {
+        await ppSmartsTable.update(editingPpSmart.id!, {
           ...data,
           updatedAt: now,
         })
       } else {
         const goalId = mode === 'free' ? 0 : (selectedGoalId || 0)
-        await db.ppSmarts.add({
+        await ppSmartsTable.create({
           goalId,
           ...data,
           createdAt: now,
@@ -134,7 +134,7 @@ export default function PpSmartPage() {
 
   async function handleLink(ppSmartId: number, newGoalId: number) {
     try {
-      await db.ppSmarts.update(ppSmartId, {
+      await ppSmartsTable.update(ppSmartId, {
         goalId: newGoalId,
         updatedAt: new Date().toISOString(),
       })
@@ -149,7 +149,7 @@ export default function PpSmartPage() {
 
   async function handleUnlink(ppSmartId: number) {
     try {
-      await db.ppSmarts.update(ppSmartId, {
+      await ppSmartsTable.update(ppSmartId, {
         goalId: 0,
         updatedAt: new Date().toISOString(),
       })
@@ -176,7 +176,7 @@ export default function PpSmartPage() {
     if (!confirmed) return
 
     try {
-      await db.ppSmarts.delete(target.id!)
+      await ppSmartsTable.remove(target.id!)
       await loadData()
     } catch (error) {
       console.error('Ошибка удаления PP SMART:', error)
@@ -196,7 +196,7 @@ export default function PpSmartPage() {
       const now = new Date().toISOString()
       const currentYear = new Date().getFullYear()
 
-      const goalId = await db.goals.add({
+      const created = await goalsTable.create({
         title,
         description: formulation,
         sphere: 'Развитие',
@@ -208,14 +208,15 @@ export default function PpSmartPage() {
         updatedAt: now,
       })
 
-      await db.ppSmarts.update(ppSmart.id!, {
-        goalId: goalId as number,
+      const goalId = created.id as number
+      await ppSmartsTable.update(ppSmart.id!, {
+        goalId,
         updatedAt: now,
       })
 
       await loadData()
       setMode('linked')
-      setSelectedGoalId(goalId as number)
+      setSelectedGoalId(goalId)
     } catch (error) {
       console.error('Ошибка создания цели:', error)
     }
@@ -229,7 +230,7 @@ export default function PpSmartPage() {
       const now = new Date().toISOString()
       const currentYear = new Date().getFullYear()
 
-      const strategyId = await db.strategies.add({
+      const created = await strategiesTable.create({
         title,
         description: formulation,
         sphere: 'Развитие',
@@ -240,8 +241,8 @@ export default function PpSmartPage() {
         updatedAt: now,
       })
 
-      const virtualId = (strategyId as number) + STRATEGY_OFFSET
-      await db.ppSmarts.update(ppSmart.id!, {
+      const virtualId = (created.id as number) + STRATEGY_OFFSET
+      await ppSmartsTable.update(ppSmart.id!, {
         goalId: virtualId,
         updatedAt: now,
       })
@@ -288,7 +289,7 @@ export default function PpSmartPage() {
             >
               <span>📋 {g.title}</span>
               <span className="text-text-light">{g.sphere}</span>
-              {ppSmart.goalId === g.id && <span className="ml-auto">✓</span>}
+              {ppSmart.goalId === g.id && <span className="ml-auto">✔</span>}
             </button>
           ))}
           {strategies.map(s => (
@@ -304,7 +305,7 @@ export default function PpSmartPage() {
             >
               <span>🎯 {s.title}</span>
               <span className="text-warning">стратегия</span>
-              {ppSmart.goalId === s.id! + STRATEGY_OFFSET && <span className="ml-auto">✓</span>}
+              {ppSmart.goalId === s.id! + STRATEGY_OFFSET && <span className="ml-auto">✔</span>}
             </button>
           ))}
         </div>
@@ -399,7 +400,7 @@ export default function PpSmartPage() {
           </div>
         )}
 
-        {/* ═══ КНОПКИ: Создать цель/стратегию (для СВОБОДНЫХ) ═══ */}
+        {/* ═══ КНОПКИ Создать цель/стратегию (для СВОБОДНЫХ) ═══ */}
         {isFree && formulation && (
           <div className="mt-4 bg-success/5 border-2 border-success/20 rounded-xl p-4">
             <p className="text-sm font-bold text-text mb-3">

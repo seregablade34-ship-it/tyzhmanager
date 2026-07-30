@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { goalsTable, strategiesTable, actionStepsTable, dailyEntriesTable, tasksTable } from '../api/helpers'
 import type { Goal, Strategy, ActionStep } from '../types'
 import ActionStepItem from '../components/ActionStepItem'
 
@@ -31,9 +31,9 @@ export default function ActionCascadePage() {
   async function loadData() {
     try {
       const [goalsData, strategiesData, stepsData] = await Promise.all([
-        db.goals.orderBy('order').toArray(),
-        db.strategies.orderBy('order').toArray(),
-        db.actionSteps.orderBy('order').toArray(),
+        goalsTable.getAll('order'),
+        strategiesTable.getAll('order'),
+        actionStepsTable.getAll('order'),
       ])
       setGoals(goalsData)
       setStrategies(strategiesData)
@@ -69,7 +69,7 @@ export default function ActionCascadePage() {
     try {
       const now = new Date().toISOString()
       const siblings = goalSteps.filter(s => !s.parentId)
-      await db.actionSteps.add({
+      await actionStepsTable.create({
         goalId: selectedGoalId,
         parentId: undefined,
         title: `🎯 ${title}`,
@@ -78,7 +78,7 @@ export default function ActionCascadePage() {
         level: 0,
         createdAt: now,
         updatedAt: now,
-      })
+      } as Partial<ActionStep>)
       await loadData()
       setShowImport(false)
     } catch (error) {
@@ -92,7 +92,7 @@ export default function ActionCascadePage() {
     try {
       const now = new Date().toISOString()
       const siblings = goalSteps.filter(s => !s.parentId)
-      await db.actionSteps.add({
+      await actionStepsTable.create({
         goalId: selectedGoalId,
         parentId: undefined,
         title: `📋 ${title}`,
@@ -101,7 +101,7 @@ export default function ActionCascadePage() {
         level: 0,
         createdAt: now,
         updatedAt: now,
-      })
+      } as Partial<ActionStep>)
       await loadData()
       setShowImport(false)
     } catch (error) {
@@ -141,19 +141,19 @@ export default function ActionCascadePage() {
       const now = new Date().toISOString()
 
       if (editingStep) {
-        await db.actionSteps.update(editingStep.id!, {
+        await actionStepsTable.update(editingStep.id!, {
           title: formTitle.trim(),
           description: formDescription.trim() || undefined,
           actions: formActions.trim() || undefined,
           deadline: formDeadline || undefined,
           updatedAt: now,
-        })
+        } as Partial<ActionStep>)
       } else {
         const siblings = goalSteps.filter(s =>
           formParentId ? s.parentId === formParentId : !s.parentId
         )
 
-        await db.actionSteps.add({
+        await actionStepsTable.create({
           goalId: selectedGoalId,
           parentId: formParentId,
           title: formTitle.trim(),
@@ -165,7 +165,7 @@ export default function ActionCascadePage() {
           level: formLevel,
           createdAt: now,
           updatedAt: now,
-        })
+        } as Partial<ActionStep>)
       }
 
       await loadData()
@@ -184,7 +184,7 @@ export default function ActionCascadePage() {
   async function handleToggle(id: number, isCompleted: boolean) {
     try {
       const now = new Date().toISOString()
-      await db.actionSteps.update(id, { isCompleted, updatedAt: now })
+      await actionStepsTable.update(id, { isCompleted, updatedAt: now } as Partial<ActionStep>)
       await loadData()
     } catch (error) {
       console.error('Ошибка:', error)
@@ -207,7 +207,7 @@ export default function ActionCascadePage() {
       }
       collectChildren(id)
 
-      await db.actionSteps.bulkDelete(toDelete)
+      await actionStepsTable.bulkRemove(toDelete)
       await loadData()
     } catch (error) {
       console.error('Ошибка удаления:', error)
@@ -221,18 +221,18 @@ export default function ActionCascadePage() {
     try {
       const now = new Date().toISOString()
 
-      const entry = await db.dailyEntries.where('date').equals(dateStr).first()
+      const entry = await dailyEntriesTable.getOneWhere('date', dateStr)
       if (!entry) {
-        await db.dailyEntries.add({
+        await dailyEntriesTable.create({
           date: dateStr,
           createdAt: now,
           updatedAt: now,
         })
       }
 
-      const existingTasks = await db.tasks.where('date').equals(dateStr).count()
+      const existingTasks = await tasksTable.count('date', dateStr)
 
-      await db.tasks.add({
+      await tasksTable.create({
         goalId: selectedGoalId || undefined,
         actionStepId: step.id,
         date: dateStr,

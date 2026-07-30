@@ -9,9 +9,8 @@ import {
 } from '../utils/dateHelpers'
 import { useDailyEntry } from '../hooks/useDailyEntry'
 import { getDailyQuote } from '../utils/quotes'
-import { db } from '../db/database'
+import { goalsTable, tasksTable, transfersTable } from '../api/helpers'
 import type { Goal, TransferReason } from '../types'
-import EnergyScale from '../components/EnergyScale'
 import MorningBlock from '../components/MorningBlock'
 import TaskList from '../components/TaskList'
 import EveningBlock from '../components/EveningBlock'
@@ -53,9 +52,6 @@ export default function DailyPage() {
     entry,
     tasks,
     isLoading,
-    updateEnergy,
-    updateEnergyEvening,
-    updateAnchor,
     updateIntention,
     updateGratitude,
     updatePriorities,
@@ -76,7 +72,7 @@ export default function DailyPage() {
 
   // Загрузка целей для импорта
   useEffect(() => {
-    db.goals.orderBy('order').toArray().then(setGoals).catch(console.error)
+    goalsTable.getAll('order').then(setGoals).catch(console.error)
   }, [])
 
   // Загрузка данных недели
@@ -91,7 +87,7 @@ export default function DailyPage() {
 
   async function loadWeekData() {
     try {
-      const allTasks = await db.tasks.toArray()
+      const allTasks = await tasksTable.getAll()
       const data = weekDates.map(date => {
         const dayTasks = allTasks.filter(t => t.date === date)
         const done = dayTasks.filter(t => t.status === 'done').length
@@ -141,7 +137,7 @@ export default function DailyPage() {
     }
   ) => {
     try {
-      const task = await db.tasks.get(taskId)
+      const task = await tasksTable.getById(taskId)
       if (!task) return
 
       const now = new Date().toISOString()
@@ -155,13 +151,13 @@ export default function DailyPage() {
         createdAt: now,
         updatedAt: now,
       }
-      await db.tasks.add(newTask)
+      await tasksTable.create(newTask)
 
       if (data.type === 'move') {
-        await db.tasks.delete(taskId)
+        await tasksTable.remove(taskId)
       }
 
-      await db.taskTransfers.add({
+      await transfersTable.create({
         taskId,
         fromDate: selectedDate,
         toDate: data.toDate,
@@ -344,20 +340,7 @@ export default function DailyPage() {
         </div>
       </div>
 
-      {/* === ШКАЛА ЭНЕРГИИ === */}
-      <div className="mb-4">
-        <EnergyScale
-          value={entry.energyLevel}
-          onChange={updateEnergy}
-          valueEvening={entry.energyEvening}
-          onChangeEvening={updateEnergyEvening}
-          anchor={entry.energyAnchor}
-          onAnchorChange={updateAnchor}
-          date={selectedDate}
-        />
-      </div>
-
-      {/* === УТРЕННИЙ БЛОК (свёрнут по умолчанию) === */}
+      {/* === ШКАЛА ЭНЕРГИИ + УТРЕННИЙ БЛОК (свёрнут по умолчанию) === */}
       <div className="bg-surface border border-border rounded-xl mb-4 overflow-hidden">
         <button
           onClick={() => setMorningOpen(!morningOpen)}

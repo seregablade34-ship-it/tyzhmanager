@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { strategiesTable, reflectionsTable } from '../api/helpers'
 import type { Strategy } from '../types'
 import StrategyCard from '../components/StrategyCard'
 import StrategyForm from '../components/StrategyForm'
@@ -23,7 +23,7 @@ export default function StrategyPage() {
 
   async function loadStrategies() {
     try {
-      const data = await db.strategies.orderBy('order').toArray()
+      const data = await strategiesTable.getAll('order')
       setStrategies(data)
     } catch (error) {
       console.error('Ошибка загрузки стратегий:', error)
@@ -59,18 +59,18 @@ export default function StrategyPage() {
       const now = new Date().toISOString()
 
       if (editingStrategy) {
-        await db.strategies.update(editingStrategy.id!, {
+        await strategiesTable.update(editingStrategy.id!, {
           ...data,
           updatedAt: now,
-        })
+        } as Partial<Strategy>)
       } else {
-        await db.strategies.add({
+        await strategiesTable.create({
           ...data,
           status: 'active',
           order: strategies.length,
           createdAt: now,
           updatedAt: now,
-        })
+        } as Partial<Strategy>)
       }
 
       await loadStrategies()
@@ -93,8 +93,12 @@ export default function StrategyPage() {
     if (!confirmed) return
 
     try {
-      await db.strategies.delete(id)
-      await db.goalReflections.where('strategyId').equals(id).delete()
+      await strategiesTable.remove(id)
+      // Удаляем связанные рефлексии
+      const refs = await reflectionsTable.getWhere('strategyId', id)
+      if (refs.length > 0) {
+        await reflectionsTable.bulkRemove(refs.map(r => r.id!))
+      }
       await loadStrategies()
     } catch (error) {
       console.error('Ошибка удаления стратегии:', error)
@@ -121,17 +125,17 @@ export default function StrategyPage() {
       const now = new Date().toISOString()
 
       if (reflectionType === 'completed') {
-        await db.strategies.update(reflectionStrategy.id!, {
+        await strategiesTable.update(reflectionStrategy.id!, {
           status: 'completed',
           updatedAt: now,
-        })
+        } as Partial<Strategy>)
         // 🎊 Конфетти!
         fireGoalConfetti()
       } else {
-        await db.strategies.update(reflectionStrategy.id!, {
+        await strategiesTable.update(reflectionStrategy.id!, {
           status: 'cancelled',
           updatedAt: now,
-        })
+        } as Partial<Strategy>)
       }
 
       await loadStrategies()

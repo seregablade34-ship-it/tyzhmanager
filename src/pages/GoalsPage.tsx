@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { goalsTable, strategiesTable, reflectionsTable } from '../api/helpers'
 import type { Goal, Strategy, MonthProgress } from '../types'
 import GoalCard from '../components/GoalCard'
 import GoalForm from '../components/GoalForm'
@@ -18,8 +18,6 @@ export default function GoalsPage() {
   const [reflectionGoal, setReflectionGoal] = useState<Goal | null>(null)
   const [reflectionType, setReflectionType] = useState<'completed' | 'failed'>('completed')
 
-  // Конфетти
-
   // Загрузка из БД
   useEffect(() => {
     loadData()
@@ -28,8 +26,8 @@ export default function GoalsPage() {
   async function loadData() {
     try {
       const [goalsData, strategiesData] = await Promise.all([
-        db.goals.orderBy('order').toArray(),
-        db.strategies.orderBy('order').toArray(),
+        goalsTable.getAll('order'),
+        strategiesTable.getAll('order'),
       ])
       setGoals(goalsData)
       setStrategies(strategiesData)
@@ -77,12 +75,12 @@ export default function GoalsPage() {
       const now = new Date().toISOString()
 
       if (editingGoal) {
-        await db.goals.update(editingGoal.id!, {
+        await goalsTable.update(editingGoal.id!, {
           ...data,
           updatedAt: now,
         })
       } else {
-        await db.goals.add({
+        await goalsTable.create({
           ...data,
           status: 'active',
           progress: 0,
@@ -112,9 +110,12 @@ export default function GoalsPage() {
     if (!confirmed) return
 
     try {
-      await db.goals.delete(id)
+      await goalsTable.remove(id)
       // Удаляем связанную рефлексию
-      await db.goalReflections.where('goalId').equals(id).delete()
+      const refs = await reflectionsTable.getWhere('goalId', id)
+      for (const ref of refs) {
+        if (ref.id) await reflectionsTable.remove(ref.id)
+      }
       await loadData()
     } catch (error) {
       console.error('Ошибка удаления цели:', error)
@@ -125,7 +126,7 @@ export default function GoalsPage() {
   async function handleProgressChange(id: number, progress: number) {
     try {
       const now = new Date().toISOString()
-      await db.goals.update(id, {
+      await goalsTable.update(id, {
         progress,
         updatedAt: now,
       })
@@ -139,7 +140,7 @@ export default function GoalsPage() {
   async function handleMonthlyChange(id: number, monthly: MonthProgress[]) {
     try {
       const now = new Date().toISOString()
-      await db.goals.update(id, {
+      await goalsTable.update(id, {
         monthlyProgress: monthly,
         updatedAt: now,
       })
@@ -170,7 +171,7 @@ export default function GoalsPage() {
 
       if (reflectionType === 'completed') {
         // Ставим 100% и статус completed
-        await db.goals.update(reflectionGoal.id!, {
+        await goalsTable.update(reflectionGoal.id!, {
           status: 'completed',
           progress: 100,
           updatedAt: now,
@@ -179,7 +180,7 @@ export default function GoalsPage() {
         fireGoalConfetti()
       } else {
         // Ставим статус cancelled
-        await db.goals.update(reflectionGoal.id!, {
+        await goalsTable.update(reflectionGoal.id!, {
           status: 'cancelled',
           updatedAt: now,
         })
@@ -329,7 +330,7 @@ export default function GoalsPage() {
         <div className="grid gap-4">
           {sortedGoals.map(goal => (
             <GoalCard
-               key={goal.id}
+              key={goal.id}
               goal={goal}
               strategyTitle={getStrategyTitle(goal.strategyId)}
               onEdit={handleEdit}

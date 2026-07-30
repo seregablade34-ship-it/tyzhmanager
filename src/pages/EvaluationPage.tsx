@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db } from '../db/database'
+import { goalsTable, strategiesTable, descartesTable, threePTable, coachingTable } from '../api/helpers'
 import type { Goal, Strategy, DescartesSquare, ThreePResult, CoachingSession } from '../types'
 import DescartesSquareForm from '../components/DescartesSquareForm'
 import ThreePForm from '../components/ThreePForm'
@@ -27,11 +27,11 @@ export default function EvaluationPage() {
   async function loadData() {
     try {
       const [goalsArr, strategiesArr, descArr, tpArr, coachArr] = await Promise.all([
-        db.goals.orderBy('order').toArray(),
-        db.strategies.orderBy('order').toArray(),
-        db.descartesSquares.toArray(),
-        db.threePResults.toArray(),
-        db.coachingSessions.toArray(),
+        goalsTable.getAll('order'),
+        strategiesTable.getAll('order'),
+        descartesTable.getAll(),
+        threePTable.getAll(),
+        coachingTable.getAll(),
       ])
       setGoals(goalsArr)
       setStrategies(strategiesArr)
@@ -86,7 +86,7 @@ export default function EvaluationPage() {
     },
     {
       id: 'descartes' as Screen,
-      icon: '📲',
+      icon: '🔲',
       title: 'Квадрат Декарта',
       description: '4 вопроса помогут увидеть цель со всех сторон',
       done: hasDescartes(),
@@ -267,7 +267,7 @@ export default function EvaluationPage() {
                 flex items-center gap-4 relative
               `}
             >
-              {/* Иконка */}
+              {/* иконка */}
               <span className="text-3xl flex-shrink-0">{tool.icon}</span>
 
               {/* Текст */}
