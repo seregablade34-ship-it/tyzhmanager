@@ -11,6 +11,7 @@ import { useDailyEntry } from '../hooks/useDailyEntry'
 import { getDailyQuote } from '../utils/quotes'
 import { goalsTable, tasksTable, transfersTable } from '../api/helpers'
 import type { Goal, TransferReason } from '../types'
+import EnergyScale from '../components/EnergyScale'
 import MorningBlock from '../components/MorningBlock'
 import TaskList from '../components/TaskList'
 import EveningBlock from '../components/EveningBlock'
@@ -52,6 +53,9 @@ export default function DailyPage() {
     entry,
     tasks,
     isLoading,
+    updateEnergy,
+    updateEnergyEvening,
+    updateAnchor,
     updateIntention,
     updateGratitude,
     updatePriorities,
@@ -338,6 +342,19 @@ export default function DailyPage() {
             </p>
           </div>
         </div>
+      </div>
+
+ {/* === ШКАЛА ЭНЕРГИИ === */}
+      <div className="mb-4">
+        <EnergyScale
+          value={entry.energyLevel}
+          onChange={updateEnergy}
+          valueEvening={entry.energyEvening}
+          onChangeEvening={updateEnergyEvening}
+          anchor={entry.energyAnchor}
+          onAnchorChange={updateAnchor}
+          date={selectedDate}
+        />
       </div>
 
       {/* === ШКАЛА ЭНЕРГИИ + УТРЕННИЙ БЛОК (свёрнут по умолчанию) === */}
