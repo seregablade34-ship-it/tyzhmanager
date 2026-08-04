@@ -1,9 +1,10 @@
 // ==========================================
 // API HELPERS — мост между фронтендом и Supabase
 // Конвертация camelCase ↔ snake_case + CRUD обёртки
+// Версия 2: user_id + RLS (автоматическая фильтрация)
 // ==========================================
 
-import { supabase, deviceId } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import type {
   Strategy, Goal, PpSmart, ActionStep,
   DailyEntry, Task, GoalEvaluation,
@@ -42,7 +43,7 @@ export function toSnake(obj: Record<string, any>): Record<string, any> {
 export function toCamel<T = any>(obj: Record<string, any>): T {
   const result: Record<string, any> = {}
   for (const [key, val] of Object.entries(obj)) {
-    if (key === 'device_id') continue
+    if (key === 'user_id') continue
     result[snakeToCamel(key)] = val
   }
   return result as T
@@ -55,6 +56,7 @@ export function toCamelArray<T = any>(arr: Record<string, any>[]): T[] {
 
 // ==========================================
 // ФАБРИКА CRUD ДЛЯ ТАБЛИЦЫ
+// RLS автоматически фильтрует по user_id!
 // ==========================================
 
 export function createTable<T extends { id?: number }>(
@@ -65,7 +67,7 @@ export function createTable<T extends { id?: number }>(
     // --- ЧТЕНИЕ ---
 
     async getAll(orderBy?: string, ascending = true): Promise<T[]> {
-      let q = supabase.from(tableName).select('*').eq('device_id', deviceId)
+      let q = supabase.from(tableName).select('*')
       if (orderBy) q = q.order(camelToSnake(orderBy), { ascending })
       const { data, error } = await q
       if (error) throw error
@@ -75,7 +77,7 @@ export function createTable<T extends { id?: number }>(
     async getById(id: number): Promise<T | null> {
       const { data, error } = await supabase
         .from(tableName).select('*')
-        .eq('id', id).eq('device_id', deviceId)
+        .eq('id', id)
         .maybeSingle()
       if (error || !data) return null
       return toCamel<T>(data)
@@ -83,7 +85,6 @@ export function createTable<T extends { id?: number }>(
 
     async getWhere(field: string, value: any, orderBy?: string, ascending = true): Promise<T[]> {
       let q = supabase.from(tableName).select('*')
-        .eq('device_id', deviceId)
         .eq(camelToSnake(field), value)
       if (orderBy) q = q.order(camelToSnake(orderBy), { ascending })
       const { data, error } = await q
@@ -94,7 +95,6 @@ export function createTable<T extends { id?: number }>(
     async getOneWhere(field: string, value: any): Promise<T | null> {
       const { data, error } = await supabase
         .from(tableName).select('*')
-        .eq('device_id', deviceId)
         .eq(camelToSnake(field), value)
         .maybeSingle()
       if (error || !data) return null
@@ -106,7 +106,7 @@ export function createTable<T extends { id?: number }>(
     async create(item: Partial<T>): Promise<T> {
       const snake = toSnake(item as Record<string, any>)
       delete snake.id
-      snake.device_id = deviceId
+      delete snake.user_id
       const { data, error } = await supabase
         .from(tableName).insert(snake).select().single()
       if (error) throw error
@@ -115,7 +115,7 @@ export function createTable<T extends { id?: number }>(
 
     async put(item: Partial<T>): Promise<T> {
       const snake = toSnake(item as Record<string, any>)
-      snake.device_id = deviceId
+      delete snake.user_id
       const opts = upsertConflict ? { onConflict: upsertConflict } : undefined
       const { data, error } = await supabase
         .from(tableName).upsert(snake, opts).select().single()
@@ -126,10 +126,10 @@ export function createTable<T extends { id?: number }>(
     async update(id: number, changes: Partial<T>): Promise<void> {
       const snake = toSnake(changes as Record<string, any>)
       delete snake.id
-      delete snake.device_id
+      delete snake.user_id
       const { error } = await supabase
         .from(tableName).update(snake)
-        .eq('id', id).eq('device_id', deviceId)
+        .eq('id', id)
       if (error) throw error
     },
 
@@ -138,7 +138,7 @@ export function createTable<T extends { id?: number }>(
     async remove(id: number): Promise<void> {
       const { error } = await supabase
         .from(tableName).delete()
-        .eq('id', id).eq('device_id', deviceId)
+        .eq('id', id)
       if (error) throw error
     },
 
@@ -146,7 +146,7 @@ export function createTable<T extends { id?: number }>(
       if (ids.length === 0) return
       const { error } = await supabase
         .from(tableName).delete()
-        .in('id', ids).eq('device_id', deviceId)
+        .in('id', ids)
       if (error) throw error
     },
 
@@ -155,7 +155,6 @@ export function createTable<T extends { id?: number }>(
     async count(field?: string, value?: any): Promise<number> {
       let q = supabase
         .from(tableName).select('id', { count: 'exact', head: true })
-        .eq('device_id', deviceId)
       if (field && value !== undefined) q = q.eq(camelToSnake(field), value)
       const { count, error } = await q
       if (error) throw error
@@ -163,7 +162,7 @@ export function createTable<T extends { id?: number }>(
     },
 
     query() {
-      return supabase.from(tableName).select('*').eq('device_id', deviceId)
+      return supabase.from(tableName).select('*')
     },
   }
 }
@@ -176,12 +175,12 @@ export const strategiesTable   = createTable<Strategy>('strategies')
 export const goalsTable        = createTable<Goal>('goals')
 export const ppSmartsTable     = createTable<PpSmart>('pp_smarts')
 export const actionStepsTable  = createTable<ActionStep>('action_steps')
-export const dailyEntriesTable = createTable<DailyEntry>('daily_entries', 'device_id,date')
+export const dailyEntriesTable = createTable<DailyEntry>('daily_entries', 'user_id,date')
 export const tasksTable        = createTable<Task>('tasks')
 export const evalTable         = createTable<GoalEvaluation>('goal_evaluations')
 export const achievementsTable = createTable<Achievement>('achievements')
 export const combosTable       = createTable<Combo>('combos')
-export const settingsTable     = createTable<UserSettings>('user_settings', 'device_id')
+export const settingsTable     = createTable<UserSettings>('user_settings', 'user_id')
 export const descartesTable    = createTable<DescartesSquare>('descartes_squares')
 export const threePTable       = createTable<ThreePResult>('three_p_results')
 export const coachingTable     = createTable<CoachingSession>('coaching_sessions')

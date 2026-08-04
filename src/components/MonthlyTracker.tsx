@@ -10,6 +10,16 @@ export function createEmptyMonthly(): MonthProgress[] {
   return Array.from({ length: 12 }, () => ({ checked: false, comment: '' }))
 }
 
+/** Гарантирует массив из 12 корректных элементов */
+function normalizeMonthly(raw: any): MonthProgress[] {
+  const empty = createEmptyMonthly()
+  if (!Array.isArray(raw) || raw.length === 0) return empty
+  return empty.map((def, i) => ({
+    checked: raw[i]?.checked ?? def.checked,
+    comment: raw[i]?.comment ?? def.comment,
+  }))
+}
+
 interface MonthlyTrackerProps {
   monthly: MonthProgress[]
   onChange: (updated: MonthProgress[]) => void
@@ -17,11 +27,14 @@ interface MonthlyTrackerProps {
 }
 
 export default function MonthlyTracker({
-  monthly,
+  monthly: rawMonthly,
   onChange,
   disabled = false,
 }: MonthlyTrackerProps) {
   const [expandedMonth, setExpandedMonth] = useState<number | null>(null)
+
+  // Нормализуем — всегда 12 элементов с checked + comment
+  const monthly = normalizeMonthly(rawMonthly)
 
   const checkedCount = monthly.filter(m => m.checked).length
 
@@ -57,7 +70,7 @@ export default function MonthlyTracker({
       <div className="grid grid-cols-6 gap-1.5">
         {MONTHS.map((name, i) => {
           const month = monthly[i]
-          const hasComment = month.comment.length > 0
+          const hasComment = (month.comment || '').length > 0
           const isExpanded = expandedMonth === i
 
           return (
