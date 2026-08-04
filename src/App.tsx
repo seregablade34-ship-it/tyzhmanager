@@ -18,6 +18,7 @@ import SettingsPage from './pages/SettingsPage'
 import AboutPage from './pages/AboutPage'
 import InstructionPage from './pages/InstructionPage'
 import LoginPage from './pages/LoginPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import Onboarding from './components/Onboarding'
 
 const ONBOARDING_KEY = 'tyzhmanager_onboarding_done'
@@ -25,10 +26,21 @@ const ONBOARDING_KEY = 'tyzhmanager_onboarding_done'
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isRecovery, setIsRecovery] = useState(false)
   const [loading, setLoading] = useState(true)
 
   // Проверяем авторизацию при загрузке
   useEffect(() => {
+    // Проверяем: это ссылка восстановления пароля?
+    const hash = window.location.hash
+    const isRecoveryLink = hash.includes('type=recovery')
+
+    if (isRecoveryLink) {
+      setIsRecovery(true)
+      setLoading(false)
+      return
+    }
+
     async function checkAuth() {
       // Если нет флага "Запомнить меня" — выходим
       const remember = localStorage.getItem('tyzhmanager_remember')
@@ -54,7 +66,11 @@ export default function App() {
 
     // Слушаем изменения авторизации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsRecovery(true)
+          return
+        }
         setIsLoggedIn(!!session)
       }
     )
@@ -93,6 +109,11 @@ export default function App() {
         ⏳ Загрузка...
       </div>
     )
+  }
+
+  // Восстановление пароля → ResetPasswordPage
+  if (isRecovery) {
+    return <ResetPasswordPage />
   }
 
   // Не авторизован → LoginPage
