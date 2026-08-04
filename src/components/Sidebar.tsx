@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useCombo } from '../hooks/useCombo'
 import { useAchievements } from '../hooks/useAchievements'
+import { supabase } from '../lib/supabase'
 
 const NAV_GROUPS = [
   {
@@ -39,6 +40,11 @@ const NAV_GROUPS = [
 export default function Sidebar() {
   const { currentCombo, todayCompleted } = useCombo()
   const { rank, xpProgress, totalXp } = useAchievements()
+
+  async function handleLogout() {
+    localStorage.removeItem('tyzhmanager_remember')
+    await supabase.auth.signOut()
+  }
 
   return (
     <aside className="w-56 h-full bg-surface border-r border-border flex flex-col overflow-y-auto">
@@ -126,6 +132,19 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* === КНОПКА ВЫХОДА === */}
+      <div className="p-3 border-t border-border">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-sm
+                     text-red-400 hover:bg-red-50 hover:text-red-600
+                     transition-colors cursor-pointer"
+        >
+          <span className="text-base">🚪</span>
+          Выйти
+        </button>
+      </div>
 
     </aside>
   )
