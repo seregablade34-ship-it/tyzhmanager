@@ -1,15 +1,12 @@
 // ===== Service Worker #тыжменеджер =====
-// ⚠️ МЕНЯЙ ВЕРСИЮ ПРИ КАЖДОМ ОБНОВЛЕНИИ!
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v4'
 const CACHE_NAME = 'tyzhmanager-' + CACHE_VERSION
 
-// При установке — сразу активируем новый SW
 self.addEventListener('install', function(event) {
   console.log('[SW] Установка', CACHE_VERSION)
   self.skipWaiting()
 })
 
-// При активации — удаляем ВСЕ старые кэши + перезагружаем страницы
 self.addEventListener('activate', function(event) {
   console.log('[SW] Активация', CACHE_VERSION)
   event.waitUntil(
@@ -24,21 +21,20 @@ self.addEventListener('activate', function(event) {
       )
     }).then(function() {
       return self.clients.claim()
-    }).then(function() {
-      // Перезагружаем все открытые вкладки
-      return self.clients.matchAll({ type: 'window' })
-    }).then(function(clients) {
-      clients.forEach(function(client) {
-        client.navigate(client.url)
-      })
     })
   )
 })
 
-// Стратегия: СНАЧАЛА СЕТЬ, потом кэш
 self.addEventListener('fetch', function(event) {
+  var url = event.request.url
+
+  // Пропускаем не-GET, расширения, API
   if (event.request.method !== 'GET') return
-  if (event.request.url.startsWith('chrome-extension')) return
+  if (url.startsWith('chrome-extension')) return
+  if (url.includes('api.tyzhmanager.ru')) return
+  if (url.includes('/auth/')) return
+  if (url.includes('/rest/')) return
+  if (url.includes('/storage/')) return
 
   event.respondWith(
     fetch(event.request)
@@ -53,7 +49,11 @@ self.addEventListener('fetch', function(event) {
       })
       .catch(function() {
         return caches.match(event.request).then(function(cached) {
-          return cached || new Response('Нет подключения к интернету', {
+          if (cached) return cached
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html')
+          }
+          return new Response('Offline', {
             status: 503,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' }
           })
