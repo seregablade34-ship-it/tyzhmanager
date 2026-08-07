@@ -27,23 +27,39 @@
   </head>
   <body>
     <div id="root">Загрузка...</div>
-<script>
-  window.addEventListener('error', function(e) {
-    document.getElementById('root').innerHTML = 
-      '<div style="padding:20px;color:red;font-size:14px;word-break:break-all">' +
-      '<h2>Ошибка загрузки</h2>' +
-      '<p>' + e.message + '</p>' +
-      '<p>Файл: ' + e.filename + '</p>' +
-      '<p>Строка: ' + e.lineno + '</p>' +
-      '</div>';
-  });
-  window.addEventListener('unhandledrejection', function(e) {
-    document.getElementById('root').innerHTML = 
-      '<div style="padding:20px;color:red;font-size:14px;word-break:break-all">' +
-      '<h2>Ошибка Promise</h2>' +
-      '<p>' + e.reason + '</p>' +
-      '</div>';
-  });
-</script>
+
+    <!-- Отлов ошибок (показывает на экране) -->
+    <script>
+      window.addEventListener('error', function(e) {
+        document.getElementById('root').innerHTML =
+          '<div style="padding:20px;color:red;font-size:14px;word-break:break-all">' +
+          '<h2>Ошибка загрузки</h2>' +
+          '<p>' + e.message + '</p>' +
+          '<p>Файл: ' + e.filename + '</p>' +
+          '<p>Строка: ' + e.lineno + '</p>' +
+          '</div>';
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        document.getElementById('root').innerHTML =
+          '<div style="padding:20px;color:red;font-size:14px;word-break:break-all">' +
+          '<h2>Ошибка Promise</h2>' +
+          '<p>' + e.reason + '</p>' +
+          '</div>';
+      });
+    </script>
+
+    <!-- ⚡ ГЛАВНЫЙ СКРИПТ ПРИЛОЖЕНИЯ -->
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Регистрация Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(reg) { console.log('✅ SW registered:', reg.scope) })
+            .catch(function(err) { console.log('❌ SW failed:', err) })
+        })
+      }
+    </script>
   </body>
 </html>
