@@ -10,7 +10,7 @@ import { getDeviceId } from '../utils/deviceId'
 const SUPABASE_URL = 'https://api.tyzhmanager.ru'
 
 // Анонимный ключ (безопасно хранить на фронтенде)
-const SUPABASE_ANON_KEY = 'eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJyb2xlIjogImFub24iLCAiaXNzIjogInN1cGFiYXNlIiwgImlhdCI6IDE3ODQ3OTM2MDAsICJleHAiOiAyMTAwMzU1MjAwfQ.qBR60x1x_UPO8lSkydNTqgNWJ22lR_dzc4Dk569hFKw'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg0NzkzNjAwLCJleHAiOjIxMDAzNTUyMDB9.YN12BmGtEz18Whpwl3HaxrJhLJ1Z8sXMAEkXC-6wb-M'
 
 // Создаём клиент
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
