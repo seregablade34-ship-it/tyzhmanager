@@ -3,88 +3,94 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>#тыжменеджер — дневник целей</title>
+    <title>#тыжменеджер</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#2563eb" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="#тыжменеджер" />
-    <meta name="description" content="#тыжменеджер — дневник целей эффективного человека." />
   </head>
   <body>
     <div id="root">Загрузка...</div>
 
     <script>
-      // Убиваем SW
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(r) { r.unregister(); });
+        navigator.serviceWorker.getRegistrations().then(function(r) {
+          r.forEach(function(s) { s.unregister(); });
         });
       }
-      // Очищаем кеши
-      if ('caches' in window) {
-        caches.keys().then(function(n) { n.forEach(function(k) { caches.delete(k); }); });
+
+      function log(msg) {
+        var d = document.getElementById('log');
+        if (!d) {
+          d = document.createElement('div');
+          d.id = 'log';
+          d.style.cssText = 'padding:12px;font:13px/1.6 monospace;word-break:break-all';
+          document.getElementById('root').innerHTML = '';
+          document.getElementById('root').appendChild(d);
+        }
+        d.innerHTML += msg + '<br>';
       }
 
-      // Ловим ВСЕ ошибки
-      window.addEventListener('error', function(e) {
-        var el = document.getElementById('diag');
-        if (el) el.innerHTML += '<p style="color:red">ERROR: ' + e.message + ' | ' + e.filename + ':' + e.lineno + '</p>';
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        var el = document.getElementById('diag');
-        if (el) el.innerHTML += '<p style="color:red">PROMISE: ' + e.reason + '</p>';
-      });
+      function testFetch(url, label) {
+        var ctrl = new AbortController();
+        var tid = setTimeout(function() { ctrl.abort(); }, 5000);
+        var t0 = Date.now();
 
-      // Через 3 сек — проверяем JS файл через fetch
+        return fetch(url, { method: 'HEAD', signal: ctrl.signal })
+          .then(function(r) {
+            clearTimeout(tid);
+            var ms = Date.now() - t0;
+            log(label + ': <b style="color:green">' + r.status + '</b> (' + ms + 'ms) type=' + r.headers.get('content-type'));
+            return r.status;
+          })
+          .catch(function(err) {
+            clearTimeout(tid);
+            var ms = Date.now() - t0;
+            log(label + ': <b style="color:red">' + err.name + ': ' + err.message + '</b> (' + ms + 'ms)');
+            return 0;
+          });
+      }
+
       setTimeout(function() {
         var el = document.getElementById('root');
-        if (!el || el.textContent !== 'Загрузка...') return; // React загрузился — всё ок
+        if (el && el.textContent === 'Загрузка...') {
+          // React не загрузился — запускаем диагностику
+          log('<b style="color:orange;font-size:16px">🔍 Диагностика v2</b>');
+          log('URL: ' + location.href);
+          log('UA: ' + navigator.userAgent.substring(0, 80));
 
-        var scripts = document.querySelectorAll('script[type="module"]');
-        var src = scripts.length > 0 ? scripts[0].getAttribute('src') : 'НЕ НАЙДЕН';
-        var fullUrl = scripts.length > 0 ? scripts[0].src : '';
+          // Находим script module
+          var scripts = document.querySelectorAll('script[type="module"]');
+          var jsSrc = scripts.length > 0 ? scripts[0].src : 'НЕТ';
+          log('JS bundle: ' + jsSrc);
 
-        var info = '<div id="diag" style="padding:16px;font-size:13px;font-family:monospace;word-break:break-all">';
-        info += '<h2 style="color:orange">⏱ Диагностика</h2>';
-        info += '<p>URL страницы: ' + location.href + '</p>';
-        info += '<p>Script src: ' + src + '</p>';
-        info += '<p>Full URL: ' + fullUrl + '</p>';
+          // Тестируем разные файлы
+          log('--- Тесты fetch (таймаут 5с) ---');
 
-        el.innerHTML = info + '<p>Проверяю JS файл...</p></div>';
-
-        if (fullUrl) {
-          fetch(fullUrl, { method: 'HEAD' })
-            .then(function(r) {
-              var d = document.getElementById('diag');
-              d.innerHTML += '<p>HTTP статус: <b>' + r.status + '</b></p>';
-              d.innerHTML += '<p>Content-Type: ' + r.headers.get('content-type') + '</p>';
-              d.innerHTML += '<p>Content-Length: ' + r.headers.get('content-length') + '</p>';
-              if (r.status === 200) {
-                d.innerHTML += '<p style="color:green">✅ JS файл ДОСТУПЕН. Проблема в содержимом.</p>';
-                d.innerHTML += '<p>Загружаю первые 200 символов...</p>';
-                return fetch(fullUrl).then(function(r2) { return r2.text(); });
+          testFetch('/manifest.json', '1. manifest.json')
+            .then(function() { return testFetch('/favicon.svg', '2. favicon.svg'); })
+            .then(function() { return testFetch(jsSrc, '3. JS bundle'); })
+            .then(function(status) {
+              log('--- Результат ---');
+              if (status === 200) {
+                log('<b style="color:orange">JS доступен, но module script не выполняется!</b>');
+                // Пробуем загрузить как текст
+                return fetch(jsSrc).then(function(r) { return r.text(); }).then(function(t) {
+                  log('Первые 100 символов: <code>' + t.substring(0, 100).replace(/</g, '&lt;') + '</code>');
+                  if (t.indexOf('<!doctype') > -1 || t.indexOf('<html') > -1) {
+                    log('<b style="color:red">⚠️ JS файл вернул HTML! Vercel rewrites перехватывают!</b>');
+                  }
+                });
               } else {
-                d.innerHTML += '<p style="color:red">❌ JS файл НЕ НАЙДЕН!</p>';
+                log('<b style="color:red">JS недоступен — файл не найден или сеть блокирует</b>');
               }
-            })
-            .then(function(text) {
-              if (text) {
-                var d = document.getElementById('diag');
-                d.innerHTML += '<p>Начало файла: <code>' + text.substring(0, 200).replace(/</g, '&lt;') + '</code></p>';
-              }
-            })
-            .catch(function(err) {
-              var d = document.getElementById('diag');
-              if (d) d.innerHTML += '<p style="color:red">FETCH ERROR: ' + err.message + '</p>';
             });
         }
       }, 3000);
+
+      window.addEventListener('error', function(e) { log('<span style="color:red">ERR: ' + e.message + '</span>'); });
+      window.addEventListener('unhandledrejection', function(e) { log('<span style="color:red">REJ: ' + e.reason + '</span>'); });
     </script>
 
-    <!-- ГЛАВНЫЙ СКРИПТ -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
