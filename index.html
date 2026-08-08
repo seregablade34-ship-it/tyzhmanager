@@ -11,56 +11,77 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="#тыжменеджер" />
-    <meta name="description" content="#тыжменеджер — дневник целей эффективного человека. Ставь цели, планируй день, отслеживай прогресс." />
+    <meta name="description" content="#тыжменеджер — дневник целей эффективного человека." />
   </head>
   <body>
     <div id="root">Загрузка...</div>
 
     <script>
-      // 1. Убиваем ВСЕ старые Service Worker
+      // Убиваем SW
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {
           regs.forEach(function(r) { r.unregister(); });
-          if (regs.length > 0) {
-            document.getElementById('root').textContent = 'SW очищен, перезагрузка...';
-            setTimeout(function() { location.reload(); }, 1000);
-          }
         });
       }
-
-      // 2. Очищаем старые кеши
+      // Очищаем кеши
       if ('caches' in window) {
-        caches.keys().then(function(names) {
-          names.forEach(function(name) { caches.delete(name); });
-        });
+        caches.keys().then(function(n) { n.forEach(function(k) { caches.delete(k); }); });
       }
 
-      // 3. Ловим ошибки
+      // Ловим ВСЕ ошибки
       window.addEventListener('error', function(e) {
-        document.getElementById('root').innerHTML =
-          '<div style="padding:20px;color:red;font-size:14px;word-break:break-all">' +
-          '<h2>Ошибка</h2><p>' + e.message + '</p>' +
-          '<p>Файл: ' + e.filename + '</p>' +
-          '<p>Строка: ' + e.lineno + '</p></div>';
+        var el = document.getElementById('diag');
+        if (el) el.innerHTML += '<p style="color:red">ERROR: ' + e.message + ' | ' + e.filename + ':' + e.lineno + '</p>';
       });
       window.addEventListener('unhandledrejection', function(e) {
-        document.getElementById('root').innerHTML =
-          '<div style="padding:20px;color:red;font-size:14px;word-break:break-all">' +
-          '<h2>Ошибка Promise</h2><p>' + e.reason + '</p></div>';
+        var el = document.getElementById('diag');
+        if (el) el.innerHTML += '<p style="color:red">PROMISE: ' + e.reason + '</p>';
       });
 
-      // 4. Таймаут — если через 10 сек приложение не загрузилось
+      // Через 3 сек — проверяем JS файл через fetch
       setTimeout(function() {
         var el = document.getElementById('root');
-        if (el && el.textContent === 'Загрузка...') {
-          el.innerHTML =
-            '<div style="padding:20px;color:orange;font-size:14px">' +
-            '<h2>⏱ Приложение не загрузилось за 10 сек</h2>' +
-            '<p>Попробуйте обновить страницу</p>' +
-            '<button onclick="location.reload()" style="padding:10px 20px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;margin-top:10px">🔄 Обновить</button>' +
-            '</div>';
+        if (!el || el.textContent !== 'Загрузка...') return; // React загрузился — всё ок
+
+        var scripts = document.querySelectorAll('script[type="module"]');
+        var src = scripts.length > 0 ? scripts[0].getAttribute('src') : 'НЕ НАЙДЕН';
+        var fullUrl = scripts.length > 0 ? scripts[0].src : '';
+
+        var info = '<div id="diag" style="padding:16px;font-size:13px;font-family:monospace;word-break:break-all">';
+        info += '<h2 style="color:orange">⏱ Диагностика</h2>';
+        info += '<p>URL страницы: ' + location.href + '</p>';
+        info += '<p>Script src: ' + src + '</p>';
+        info += '<p>Full URL: ' + fullUrl + '</p>';
+
+        el.innerHTML = info + '<p>Проверяю JS файл...</p></div>';
+
+        if (fullUrl) {
+          fetch(fullUrl, { method: 'HEAD' })
+            .then(function(r) {
+              var d = document.getElementById('diag');
+              d.innerHTML += '<p>HTTP статус: <b>' + r.status + '</b></p>';
+              d.innerHTML += '<p>Content-Type: ' + r.headers.get('content-type') + '</p>';
+              d.innerHTML += '<p>Content-Length: ' + r.headers.get('content-length') + '</p>';
+              if (r.status === 200) {
+                d.innerHTML += '<p style="color:green">✅ JS файл ДОСТУПЕН. Проблема в содержимом.</p>';
+                d.innerHTML += '<p>Загружаю первые 200 символов...</p>';
+                return fetch(fullUrl).then(function(r2) { return r2.text(); });
+              } else {
+                d.innerHTML += '<p style="color:red">❌ JS файл НЕ НАЙДЕН!</p>';
+              }
+            })
+            .then(function(text) {
+              if (text) {
+                var d = document.getElementById('diag');
+                d.innerHTML += '<p>Начало файла: <code>' + text.substring(0, 200).replace(/</g, '&lt;') + '</code></p>';
+              }
+            })
+            .catch(function(err) {
+              var d = document.getElementById('diag');
+              if (d) d.innerHTML += '<p style="color:red">FETCH ERROR: ' + err.message + '</p>';
+            });
         }
-      }, 10000);
+      }, 3000);
     </script>
 
     <!-- ГЛАВНЫЙ СКРИПТ -->
