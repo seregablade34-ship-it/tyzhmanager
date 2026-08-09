@@ -9,7 +9,7 @@ import { getDeviceId } from '../utils/deviceId'
 // Адрес API Supabase (через Kong на порту 8000)
 const SUPABASE_URL = 'https://api.tyzhmanager.ru'
 
-// Анонимный ключ (безопасно хранить на фронтенде)
+// Анонимный ключ (обновлён 07.08.2026 — без пробелов в JSON)
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg0NzkzNjAwLCJleHAiOjIxMDAzNTUyMDB9.YN12BmGtEz18Whpwl3HaxrJhLJ1Z8sXMAEkXC-6wb-M'
 
 // Создаём клиент

@@ -19,6 +19,7 @@ import AboutPage from './pages/AboutPage'
 import InstructionPage from './pages/InstructionPage'
 import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import OAuthCallback from './pages/OAuthCallback'
 import Onboarding from './components/Onboarding'
 
 const ONBOARDING_KEY = 'tyzhmanager_onboarding_done'
@@ -29,9 +30,7 @@ export default function App() {
   const [isRecovery, setIsRecovery] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // Проверяем авторизацию при загрузке
   useEffect(() => {
-    // Проверяем: это ссылка восстановления пароля?
     const hash = window.location.hash
     const isRecoveryLink = hash.includes('type=recovery')
 
@@ -42,7 +41,6 @@ export default function App() {
     }
 
     async function checkAuth() {
-      // Если нет флага "Запомнить меня" — выходим
       const remember = localStorage.getItem('tyzhmanager_remember')
       if (!remember) {
         const { data } = await supabase.auth.getSession()
@@ -54,7 +52,6 @@ export default function App() {
         return
       }
 
-      // Проверяем сессию
       const { data } = await supabase.auth.getSession()
       if (data.session) {
         setIsLoggedIn(true)
@@ -64,7 +61,6 @@ export default function App() {
 
     checkAuth()
 
-    // Слушаем изменения авторизации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
@@ -78,7 +74,6 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Проверяем: первый ли это запуск?
   useEffect(() => {
     if (isLoggedIn) {
       const done = localStorage.getItem(ONBOARDING_KEY)
@@ -88,13 +83,24 @@ export default function App() {
     }
   }, [isLoggedIn])
 
-  // Завершение онбординга
   function handleOnboardingComplete() {
     localStorage.setItem(ONBOARDING_KEY, 'true')
     setShowOnboarding(false)
   }
 
-  // Экран загрузки
+  // ─── OAuth Callback — проверяем И pathname И параметры URL ───
+  const _sp = new URLSearchParams(window.location.search)
+  const isOAuthCallback =
+    window.location.pathname === '/auth/callback' ||
+    (_sp.has('code') && _sp.has('state'))
+
+  console.log('[App] pathname:', window.location.pathname, 'isOAuth:', isOAuthCallback)
+
+  if (isOAuthCallback) {
+    console.log('[App] >>> Rendering OAuthCallback')
+    return <OAuthCallback />
+  }
+
   if (loading) {
     return (
       <div style={{
@@ -111,26 +117,22 @@ export default function App() {
     )
   }
 
-  // Восстановление пароля → ResetPasswordPage
   if (isRecovery) {
     return <ResetPasswordPage />
   }
 
-  // Не авторизован → LoginPage
   if (!isLoggedIn) {
     return <LoginPage onLogin={() => setIsLoggedIn(true)} />
   }
 
   return (
     <>
-      {/* Онбординг — показывается ОДИН раз при первом запуске */}
       {showOnboarding && (
         <Onboarding onComplete={handleOnboardingComplete} />
       )}
 
       <BrowserRouter>
         <Routes>
-          {/* Все страницы внутри общего каркаса с сайдбаром */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<DailyPage />} />
             <Route path="/strategy" element={<StrategyPage />} />

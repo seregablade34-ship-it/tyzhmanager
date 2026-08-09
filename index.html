@@ -3,94 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>#тыжменеджер</title>
+    <title>#тыжменеджер — дневник целей</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#2563eb" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="#тыжменеджер" />
+    <meta name="description" content="#тыжменеджер — дневник целей эффективного человека. Ставь цели, планируй день, отслеживай прогресс." />
   </head>
   <body>
-    <div id="root">Загрузка...</div>
-
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(r) {
-          r.forEach(function(s) { s.unregister(); });
-        });
-      }
-
-      function log(msg) {
-        var d = document.getElementById('log');
-        if (!d) {
-          d = document.createElement('div');
-          d.id = 'log';
-          d.style.cssText = 'padding:12px;font:13px/1.6 monospace;word-break:break-all';
-          document.getElementById('root').innerHTML = '';
-          document.getElementById('root').appendChild(d);
-        }
-        d.innerHTML += msg + '<br>';
-      }
-
-      function testFetch(url, label) {
-        var ctrl = new AbortController();
-        var tid = setTimeout(function() { ctrl.abort(); }, 5000);
-        var t0 = Date.now();
-
-        return fetch(url, { method: 'HEAD', signal: ctrl.signal })
-          .then(function(r) {
-            clearTimeout(tid);
-            var ms = Date.now() - t0;
-            log(label + ': <b style="color:green">' + r.status + '</b> (' + ms + 'ms) type=' + r.headers.get('content-type'));
-            return r.status;
-          })
-          .catch(function(err) {
-            clearTimeout(tid);
-            var ms = Date.now() - t0;
-            log(label + ': <b style="color:red">' + err.name + ': ' + err.message + '</b> (' + ms + 'ms)');
-            return 0;
-          });
-      }
-
-      setTimeout(function() {
-        var el = document.getElementById('root');
-        if (el && el.textContent === 'Загрузка...') {
-          // React не загрузился — запускаем диагностику
-          log('<b style="color:orange;font-size:16px">🔍 Диагностика v2</b>');
-          log('URL: ' + location.href);
-          log('UA: ' + navigator.userAgent.substring(0, 80));
-
-          // Находим script module
-          var scripts = document.querySelectorAll('script[type="module"]');
-          var jsSrc = scripts.length > 0 ? scripts[0].src : 'НЕТ';
-          log('JS bundle: ' + jsSrc);
-
-          // Тестируем разные файлы
-          log('--- Тесты fetch (таймаут 5с) ---');
-
-          testFetch('/manifest.json', '1. manifest.json')
-            .then(function() { return testFetch('/favicon.svg', '2. favicon.svg'); })
-            .then(function() { return testFetch(jsSrc, '3. JS bundle'); })
-            .then(function(status) {
-              log('--- Результат ---');
-              if (status === 200) {
-                log('<b style="color:orange">JS доступен, но module script не выполняется!</b>');
-                // Пробуем загрузить как текст
-                return fetch(jsSrc).then(function(r) { return r.text(); }).then(function(t) {
-                  log('Первые 100 символов: <code>' + t.substring(0, 100).replace(/</g, '&lt;') + '</code>');
-                  if (t.indexOf('<!doctype') > -1 || t.indexOf('<html') > -1) {
-                    log('<b style="color:red">⚠️ JS файл вернул HTML! Vercel rewrites перехватывают!</b>');
-                  }
-                });
-              } else {
-                log('<b style="color:red">JS недоступен — файл не найден или сеть блокирует</b>');
-              }
-            });
-        }
-      }, 3000);
-
-      window.addEventListener('error', function(e) { log('<span style="color:red">ERR: ' + e.message + '</span>'); });
-      window.addEventListener('unhandledrejection', function(e) { log('<span style="color:red">REJ: ' + e.reason + '</span>'); });
-    </script>
-
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

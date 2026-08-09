@@ -28,7 +28,7 @@ const ALL_TABLES = [
 ]
 
 export default function SettingsPage() {
-  // ─── Профиль (из Supabase) ───
+  // ─── Профиль ───
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -37,12 +37,16 @@ export default function SettingsPage() {
   const [promoInput, setPromoInput] = useState('')
   const [profileLoading, setProfileLoading] = useState(true)
 
+  // ─── OAuth ───
+  const [isOAuthUser, setIsOAuthUser] = useState(false)
+  const [authProvider, setAuthProvider] = useState('')
+
   // ─── Смена пароля ───
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  // ─── Настройки (localStorage) ───
+  // ─── Настройки ───
   const [theme, setTheme] = useState<ThemeMode>(() => {
     return (localStorage.getItem('tyzhmanager_theme') as ThemeMode) || 'system'
   })
@@ -64,6 +68,12 @@ export default function SettingsPage() {
 
       setEmail(user.email || '')
 
+      // Проверяем OAuth
+      const meta = user.user_metadata || {}
+      const isOAuth = !!meta.auth_provider
+      setIsOAuthUser(isOAuth)
+      setAuthProvider(meta.auth_provider || '')
+
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('*')
@@ -71,7 +81,10 @@ export default function SettingsPage() {
         .single()
 
       if (profile) {
-        setDisplayName(profile.display_name || '')
+        // Приоритет: profile.display_name → metadata.full_name → пусто
+        const name = profile.display_name || meta.full_name || ''
+        // Не показываем email как имя
+        setDisplayName(name.includes('@') ? '' : name)
         setBirthDate(profile.birth_date || '')
         setGender(profile.gender || '')
         setReferralCode(profile.referral_code || '')
@@ -100,10 +113,7 @@ export default function SettingsPage() {
         .eq('id', user.id)
 
       if (error) throw error
-
-      // Синхронизируем имя с localStorage
       localStorage.setItem('tyzhmanager_username', displayName.trim())
-
       showStatus('✅ Профиль сохранён!')
     } catch (err) {
       showStatus('❌ Ошибка сохранения профиля')
@@ -121,14 +131,9 @@ export default function SettingsPage() {
       showStatus('❌ Пароли не совпадают')
       return
     }
-
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      })
-
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
-
       setNewPassword('')
       setConfirmPassword('')
       showStatus('✅ Пароль изменён!')
@@ -138,34 +143,27 @@ export default function SettingsPage() {
     }
   }
 
-  // ─── Копировать реферальную ссылку ───
+  // ─── Реферальная ссылка ───
   function handleCopyReferral() {
     const link = `https://tyzhmanager.ru?ref=${referralCode}`
     navigator.clipboard.writeText(link)
     showStatus('📋 Реферальная ссылка скопирована!')
   }
 
-  // ─── Активировать промокод ───
+  // ─── Промокод ───
   async function handleActivatePromo() {
     if (!promoInput.trim()) {
       showStatus('❌ Введите промокод')
       return
     }
-
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
       const { error } = await supabase
         .from('user_profiles')
-        .update({
-          promo_used: promoInput.trim(),
-          updated_at: new Date().toISOString(),
-        })
+        .update({ promo_used: promoInput.trim(), updated_at: new Date().toISOString() })
         .eq('id', user.id)
-
       if (error) throw error
-
       setPromoInput('')
       showStatus('✅ Промокод активирован!')
     } catch (err) {
@@ -182,25 +180,21 @@ export default function SettingsPage() {
     let age = today.getFullYear() - birth.getFullYear()
     const m = today.getMonth() - birth.getMonth()
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
-
     const lastDigit = age % 10
     const lastTwo = age % 100
     let word = 'лет'
     if (lastTwo >= 11 && lastTwo <= 14) word = 'лет'
     else if (lastDigit === 1) word = 'год'
     else if (lastDigit >= 2 && lastDigit <= 4) word = 'года'
-
     return `${age} ${word}`
   }
 
-  // ─── Применение темы ───
+  // ─── Тема ───
   useEffect(() => {
     const root = document.documentElement
-    if (theme === 'dark') {
-      root.classList.add('dark')
-    } else if (theme === 'light') {
-      root.classList.remove('dark')
-    } else {
+    if (theme === 'dark') root.classList.add('dark')
+    else if (theme === 'light') root.classList.remove('dark')
+    else {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       if (prefersDark) root.classList.add('dark')
       else root.classList.remove('dark')
@@ -276,9 +270,8 @@ export default function SettingsPage() {
         }
       }
       if (data._localStorage) {
-        if (data._localStorage.tyzhmanager_username) {
+        if (data._localStorage.tyzhmanager_username)
           localStorage.setItem('tyzhmanager_username', data._localStorage.tyzhmanager_username)
-          }
         if (data._localStorage.tyzhmanager_theme) {
           localStorage.setItem('tyzhmanager_theme', data._localStorage.tyzhmanager_theme)
           setTheme(data._localStorage.tyzhmanager_theme as ThemeMode)
@@ -326,31 +319,33 @@ export default function SettingsPage() {
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-text mb-6">👤 Профиль</h1>
 
-      {/* Статус-сообщение */}
       {statusMessage && (
         <div className="mb-4 px-4 py-3 bg-primary/10 text-primary rounded-lg text-center font-medium text-sm">
           {statusMessage}
         </div>
       )}
 
-      {/* ═══════════════════════════════════════ */}
-      {/* ══════ ЛИЧНЫЙ КАБИНЕТ (СВЕРХУ) ═══════ */}
-      {/* ═══════════════════════════════════════ */}
-
-      {/* Email (только чтение) */}
+      {/* Email */}
       <div className="bg-surface border border-border rounded-xl p-5 mb-6">
         <h2 className="text-lg font-semibold text-text mb-3">📧 Email</h2>
         <p className="text-sm text-text-light mb-2">Ваш email для входа в систему</p>
         <div className="px-3 py-2 rounded-lg bg-bg border border-border text-text-light text-sm">
           {email}
         </div>
+        {isOAuthUser && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-text-light">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary font-medium text-xs">
+              {authProvider === 'yandex' ? '🟡 Яндекс ID' : '🔵 ВКонтакте'}
+            </span>
+            Вход через внешний аккаунт
+          </div>
+        )}
       </div>
 
-      {/* Имя + Дата рождения + Пол */}
+      {/* Личные данные */}
       <div className="bg-surface border border-border rounded-xl p-5 mb-6">
         <h2 className="text-lg font-semibold text-text mb-4">📛 Личные данные</h2>
 
-        {/* Имя */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-text mb-1">Имя</label>
           <input
@@ -358,13 +353,13 @@ export default function SettingsPage() {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Как вас зовут?"
+            autoComplete="name"
             className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-text
                        placeholder-text-light/50 focus:outline-none focus:ring-2
                        focus:ring-primary/30 focus:border-primary transition-colors"
           />
         </div>
 
-        {/* Дата рождения */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-text mb-1">
             Дата рождения {birthDate && <span className="text-text-light font-normal">({calculateAge()})</span>}
@@ -379,7 +374,6 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* Пол */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-text mb-2">Пол</label>
           <div className="flex gap-2">
@@ -415,60 +409,64 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* Смена пароля */}
-      <div className="bg-surface border border-border rounded-xl p-5 mb-6">
-        <h2 className="text-lg font-semibold text-text mb-4">🔒 Смена пароля</h2>
+      {/* Смена пароля — ТОЛЬКО для email-пользователей */}
+      {!isOAuthUser && (
+        <div className="bg-surface border border-border rounded-xl p-5 mb-6">
+          <h2 className="text-lg font-semibold text-text mb-4">🔒 Смена пароля</h2>
 
-        <div className="mb-3">
-          <label className="block text-sm font-medium text-text mb-1">Новый пароль</label>
-          <div className="relative">
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-text mb-1">Новый пароль</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Минимум 6 символов"
+                autoComplete="new-password"
+                className="w-full px-3 py-2 pr-10 rounded-lg border border-border bg-bg text-text
+                           placeholder-text-light/50 focus:outline-none focus:ring-2
+                           focus:ring-primary/30 focus:border-primary transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-light
+                           hover:text-text cursor-pointer p-1"
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-text mb-1">Повторите пароль</label>
             <input
               type={showPassword ? 'text' : 'password'}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Минимум 6 символов"
-              className="w-full px-3 py-2 pr-10 rounded-lg border border-border bg-bg text-text
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Повторите новый пароль"
+              autoComplete="new-password"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-text
                          placeholder-text-light/50 focus:outline-none focus:ring-2
                          focus:ring-primary/30 focus:border-primary transition-colors"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-light
-                         hover:text-text cursor-pointer p-1"
-            >
-              {showPassword ? '🙈' : '👁️'}
-            </button>
           </div>
+
+          {newPassword && confirmPassword && newPassword !== confirmPassword && (
+            <p className="text-xs text-danger mb-3">❌ Пароли не совпадают</p>
+          )}
+
+          <button
+            onClick={handleChangePassword}
+            disabled={!newPassword || !confirmPassword}
+            className="w-full px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark
+                       transition-colors cursor-pointer font-medium disabled:opacity-50
+                       disabled:cursor-not-allowed"
+          >
+            🔑 Изменить пароль
+          </button>
         </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-text mb-1">Повторите пароль</label>
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Повторите новый пароль"
-            className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-text
-                       placeholder-text-light/50 focus:outline-none focus:ring-2
-                       focus:ring-primary/30 focus:border-primary transition-colors"
-          />
-        </div>
-
-        {newPassword && confirmPassword && newPassword !== confirmPassword && (
-          <p className="text-xs text-danger mb-3">❌ Пароли не совпадают</p>
-        )}
-
-        <button
-          onClick={handleChangePassword}
-          disabled={!newPassword || !confirmPassword}
-          className="w-full px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark
-                     transition-colors cursor-pointer font-medium disabled:opacity-50
-                     disabled:cursor-not-allowed"
-        >
-          🔑 Изменить пароль
-        </button>
-      </div>
+      )}
 
       {/* Реферальная ссылка */}
       <div className="bg-surface border border-border rounded-xl p-5 mb-6">
@@ -492,7 +490,7 @@ export default function SettingsPage() {
 
       {/* Промокод */}
       <div className="bg-surface border border-border rounded-xl p-5 mb-6">
-        <h2 className="text-lg font-semibold text-text mb-3">🎟️ Промокод</h2>
+        <h2 className="text-lg font-semibold text-text mb-3">🏷️ Промокод</h2>
         <p className="text-sm text-text-light mb-3">
           Введите промокод для активации дополнительных возможностей
         </p>
@@ -516,10 +514,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════ */}
-      {/* ══════ НАСТРОЙКИ (СНИЗУ) ═════════════ */}
-      {/* ═══════════════════════════════════════ */}
-
+      {/* ═══ НАСТРОЙКИ ═══ */}
       <div className="mt-10 mb-6">
         <h2 className="text-xl font-bold text-text">⚙️ Настройки</h2>
       </div>
@@ -529,39 +524,24 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold text-text mb-3">🎨 Тема оформления</h2>
         <p className="text-sm text-text-light mb-4">Выберите тему интерфейса</p>
         <div className="grid grid-cols-3 gap-2">
-          <button
-            onClick={() => setTheme('light')}
-            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg
-                       transition-colors cursor-pointer border ${
-              theme === 'light'
-                ? 'bg-primary/10 border-primary text-primary font-semibold'
-                : 'bg-bg border-border text-text-light hover:bg-surface'
-            }`}
-          >
+          <button onClick={() => setTheme('light')}
+            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg transition-colors cursor-pointer border ${
+              theme === 'light' ? 'bg-primary/10 border-primary text-primary font-semibold'
+                : 'bg-bg border-border text-text-light hover:bg-surface'}`}>
             <span className="text-2xl">☀️</span>
             <span className="text-sm">Светлая</span>
           </button>
-          <button
-            onClick={() => setTheme('dark')}
-            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg
-                       transition-colors cursor-pointer border ${
-              theme === 'dark'
-                ? 'bg-primary/10 border-primary text-primary font-semibold'
-                : 'bg-bg border-border text-text-light hover:bg-surface'
-            }`}
-          >
+          <button onClick={() => setTheme('dark')}
+            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg transition-colors cursor-pointer border ${
+              theme === 'dark' ? 'bg-primary/10 border-primary text-primary font-semibold'
+                : 'bg-bg border-border text-text-light hover:bg-surface'}`}>
             <span className="text-2xl">🌙</span>
             <span className="text-sm">Тёмная</span>
           </button>
-          <button
-            onClick={() => setTheme('system')}
-            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg
-                       transition-colors cursor-pointer border ${
-              theme === 'system'
-                ? 'bg-primary/10 border-primary text-primary font-semibold'
-                : 'bg-bg border-border text-text-light hover:bg-surface'
-            }`}
-          >
+          <button onClick={() => setTheme('system')}
+            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg transition-colors cursor-pointer border ${
+              theme === 'system' ? 'bg-primary/10 border-primary text-primary font-semibold'
+                : 'bg-bg border-border text-text-light hover:bg-surface'}`}>
             <span className="text-2xl">💻</span>
             <span className="text-sm">Системная</span>
           </button>
@@ -577,17 +557,11 @@ export default function SettingsPage() {
               {notifications ? 'Уведомления включены' : 'Уведомления отключены'}
             </p>
           </div>
-          <button
-            onClick={handleToggleNotifications}
+          <button onClick={handleToggleNotifications}
             className={`w-14 h-8 rounded-full transition-colors cursor-pointer relative ${
-              notifications ? 'bg-primary' : 'bg-border'
-            }`}
-          >
-            <div
-              className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
-                notifications ? 'translate-x-7' : 'translate-x-1'
-              }`}
-            />
+              notifications ? 'bg-primary' : 'bg-border'}`}>
+            <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+              notifications ? 'translate-x-7' : 'translate-x-1'}`} />
           </button>
         </div>
       </div>
@@ -599,40 +573,29 @@ export default function SettingsPage() {
           Сохраните копию всех данных на компьютер или восстановите из файла
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            onClick={handleExport}
+          <button onClick={handleExport}
             className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white
-                       rounded-lg hover:bg-primary-dark transition-colors cursor-pointer font-medium"
-          >
-            <span className="text-lg">📥</span>
-            Скачать мои данные
+                       rounded-lg hover:bg-primary-dark transition-colors cursor-pointer font-medium">
+            <span className="text-lg">📥</span> Скачать мои данные
           </button>
           <label className="flex items-center justify-center gap-2 px-4 py-3 bg-bg border border-border
                             rounded-lg hover:bg-surface transition-colors cursor-pointer font-medium text-text">
-            <span className="text-lg">📤</span>
-            Загрузить данные
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              className="hidden"
-            />
+            <span className="text-lg">📤</span> Загрузить данные
+            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
           </label>
         </div>
       </div>
 
-      {/* Очистка данных */}
+      {/* Очистка */}
       <div className="bg-surface border border-danger/20 rounded-xl p-5 mb-6">
         <h2 className="text-lg font-semibold text-text mb-3">🗑️ Очистка данных</h2>
         <p className="text-sm text-text-light mb-4">
           Удалить все данные приложения. Это действие нельзя отменить!
         </p>
         {!showResetConfirm ? (
-          <button
-            onClick={() => setShowResetConfirm(true)}
+          <button onClick={() => setShowResetConfirm(true)}
             className="px-4 py-2 bg-bg border border-danger/30 text-danger rounded-lg
-                       hover:bg-danger/10 transition-colors cursor-pointer font-medium"
-          >
+                       hover:bg-danger/10 transition-colors cursor-pointer font-medium">
             Удалить все данные
           </button>
         ) : (
@@ -640,22 +603,16 @@ export default function SettingsPage() {
             <p className="text-sm text-danger font-semibold mb-3">
               ⚠️ Вы уверены? Все цели, задачи, записи и достижения будут удалены!
             </p>
-            <p className="text-xs text-text-light mb-4">
-              Рекомендуем сначала скачать копию данных ☀️
-            </p>
+            <p className="text-xs text-text-light mb-4">Рекомендуем сначала скачать копию данных ☝️</p>
             <div className="flex gap-2">
-              <button
-                onClick={handleReset}
+              <button onClick={handleReset}
                 className="px-4 py-2 bg-danger text-white rounded-lg hover:bg-danger/90
-                           transition-colors cursor-pointer font-medium"
-              >
+                           transition-colors cursor-pointer font-medium">
                 Да, удалить всё
               </button>
-              <button
-                onClick={() => setShowResetConfirm(false)}
+              <button onClick={() => setShowResetConfirm(false)}
                 className="px-4 py-2 bg-bg border border-border text-text rounded-lg
-                           hover:bg-surface transition-colors cursor-pointer"
-              >
+                           hover:bg-surface transition-colors cursor-pointer">
                 Отмена
               </button>
             </div>
@@ -663,7 +620,6 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* Версия */}
       <div className="text-center text-text-light text-sm">
         <p>Версия 1.0.0 • Пилот</p>
       </div>
