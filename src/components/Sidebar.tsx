@@ -20,6 +20,12 @@ const NAV_GROUPS = [
       { to: '/pp-smart',   icon: '🧩', label: 'PP SMART' },
     ],
   },
+{
+    label: 'ИИ ПроТрекинг',
+    items: [
+      { to: '/ai-chat', icon: '🧠', label: 'Вектор' },
+    ],
+  },
   {
     label: 'Прогресс',
     items: [

@@ -17,6 +17,7 @@ import StatsPage from './pages/StatsPage'
 import SettingsPage from './pages/SettingsPage'
 import AboutPage from './pages/AboutPage'
 import InstructionPage from './pages/InstructionPage'
+import AiChatPage from './pages/AiChatPage'
 import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import OAuthCallback from './pages/OAuthCallback'
@@ -145,6 +146,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/instruction" element={<InstructionPage />} />
+          <Route path="/ai-chat" element={<AiChatPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
