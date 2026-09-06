@@ -56,12 +56,12 @@ export default function AiChatPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return []
       const res = await fetch(
-        'https://api.tyzhmanager.ru/rest/v1/ai_messages?select=id,role,content,created_at&order=created_at.asc&limit=50',
+        'https://api.tyzhmanager.ru/rest/v1/ai_messages?select=id,role,content,created_at&order=created_at.desc&limit=50',
         { headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg0NzkzNjAwLCJleHAiOjIxMDAzNTUyMDB9.YN12BmGtEz18Whpwl3HaxrJhLJ1Z8sXMAEkXC-6wb-M' } }
       )
       if (res.ok) {
         const data = await res.json()
-        if (Array.isArray(data)) { setMessages(data); return data }
+        if (Array.isArray(data)) { const sorted = [...data].reverse(); setMessages(sorted); return sorted }
       }
     } catch (e) { console.error('History load error:', e) }
     finally { setHistoryLoading(false) }

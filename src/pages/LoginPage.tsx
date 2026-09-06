@@ -1,6 +1,5 @@
 // ==========================================
-// СТРАНИЦА ВХОДА / РЕГИСТРАЦИИ /
-// Восстановление пароля + OAuth (Яндекс, ВК)
+// СТРАНИЦА ВХОДА / РЕГИСТРАЦИИ / Восстановление пароля
 // ==========================================
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
@@ -10,30 +9,6 @@ interface Props {
 }
 
 type Mode = 'login' | 'register' | 'reset'
-
-// ─── OAuth ───
-const REDIRECT_URI = window.location.origin + '/auth/callback'
-
-const YANDEX_URL = 'https://oauth.yandex.ru/authorize?' + new URLSearchParams({
-  response_type: 'code',
-  client_id: 'd251a207858f4689b56bb1ad417798c8',
-  redirect_uri: REDIRECT_URI,
-  state: 'yandex',
-}).toString()
-
-// ─── PKCE helpers для VK ID ───
-function generateCodeVerifier(): string {
-  const arr = new Uint8Array(32)
-  crypto.getRandomValues(arr)
-  return btoa(String.fromCharCode(...arr))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-}
-
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
-  return btoa(String.fromCharCode(...new Uint8Array(hash)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-}
 
 export default function LoginPage({ onLogin }: Props) {
   const [mode, setMode] = useState<Mode>('login')
@@ -105,30 +80,6 @@ export default function LoginPage({ onLogin }: Props) {
       }
     } finally {
       setLoading(false)
-    }
-  }
-
-  // ─── OAuth ───
-  async function handleOAuth(provider: 'yandex' | 'vk') {
-    if (provider === 'yandex') {
-      window.location.href = YANDEX_URL
-    } else {
-      // VK ID — нужен PKCE
-      const codeVerifier = generateCodeVerifier()
-      const codeChallenge = await generateCodeChallenge(codeVerifier)
-      localStorage.setItem('vk_code_verifier', codeVerifier)
-
-      const vkUrl = 'https://id.vk.com/authorize?' + new URLSearchParams({
-        response_type: 'code',
-        client_id: '54713210',
-        redirect_uri: REDIRECT_URI,
-        state: 'vk',
-        scope: 'email vkid.personal_info',
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
-      }).toString()
-
-      window.location.href = vkUrl
     }
   }
 
@@ -223,7 +174,7 @@ export default function LoginPage({ onLogin }: Props) {
           </>
         ) : (
           <>
-            {/* Переключатель */}
+            {/* Переключатель Вход / Регистрация */}
             <div style={{ display: 'flex', background: '#0f172a', borderRadius: 8, padding: 4, marginBottom: 24 }}>
               <button onClick={() => switchMode('login')} style={{
                 flex: 1, padding: '10px 0', border: 'none', borderRadius: 6, cursor: 'pointer',
@@ -237,37 +188,6 @@ export default function LoginPage({ onLogin }: Props) {
                 background: mode === 'register' ? '#3b82f6' : 'transparent',
                 color: mode === 'register' ? '#fff' : '#94a3b8',
               }}>Регистрация</button>
-            </div>
-
-            {/* OAuth */}
-            <div style={{ marginBottom: 20 }}>
-              <button onClick={() => handleOAuth('yandex')} style={{
-                width: '100%', padding: '12px 0', marginBottom: 10,
-                background: '#000', color: '#fff', border: '1px solid #333',
-                borderRadius: 8, fontSize: 15, fontWeight: 600,
-                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', gap: 10, transition: 'opacity 0.2s',
-              }}>
-                <span style={{ fontSize: 20 }}>Я</span>
-                Продолжить с Яндекс ID
-              </button>
-              <button onClick={() => handleOAuth('vk')} style={{
-                width: '100%', padding: '12px 0',
-                background: '#0077FF', color: '#fff', border: 'none',
-                borderRadius: 8, fontSize: 15, fontWeight: 600,
-                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', gap: 10, transition: 'opacity 0.2s',
-              }}>
-                <span style={{ fontSize: 18 }}>VK</span>
-                Продолжить с ВКонтакте
-              </button>
-            </div>
-
-            {/* Разделитель */}
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20, gap: 12 }}>
-              <div style={{ flex: 1, height: 1, background: '#334155' }} />
-              <span style={{ color: '#64748b', fontSize: 13 }}>или по email</span>
-              <div style={{ flex: 1, height: 1, background: '#334155' }} />
             </div>
 
             {/* Форма */}
@@ -292,6 +212,7 @@ export default function LoginPage({ onLogin }: Props) {
                   </button>
                 </div>
               </div>
+
               {mode === 'login' && (
                 <div style={{ marginBottom: 16, textAlign: 'right' }}>
                   <button type="button" onClick={() => switchMode('reset')} style={{
@@ -300,6 +221,7 @@ export default function LoginPage({ onLogin }: Props) {
                   }}>Забыли пароль?</button>
                 </div>
               )}
+
               {mode === 'register' && (
                 <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 16,
                   cursor: 'pointer', gap: 10 }} onClick={() => setAgreeTerms(!agreeTerms)}>
@@ -324,6 +246,7 @@ export default function LoginPage({ onLogin }: Props) {
                   </span>
                 </div>
               )}
+
               {mode === 'login' && (
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24,
                   cursor: 'pointer' }} onClick={() => setRememberMe(!rememberMe)}>
@@ -340,12 +263,14 @@ export default function LoginPage({ onLogin }: Props) {
                   </span>
                 </div>
               )}
+
               {error && (
                 <div style={{ background: '#7f1d1d', border: '1px solid #dc2626', borderRadius: 8,
                   padding: '10px 14px', marginBottom: 16, color: '#fecaca', fontSize: 14 }}>
                   ⚠️ {error}
                 </div>
               )}
+
               <button type="submit" disabled={loading} style={{
                 width: '100%', padding: '14px 0',
                 background: loading ? '#1e40af' : '#3b82f6',

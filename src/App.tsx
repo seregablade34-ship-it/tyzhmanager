@@ -20,7 +20,6 @@ import InstructionPage from './pages/InstructionPage'
 import AiChatPage from './pages/AiChatPage'
 import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
-import OAuthCallback from './pages/OAuthCallback'
 import Onboarding from './components/Onboarding'
 
 const ONBOARDING_KEY = 'tyzhmanager_onboarding_done'
@@ -89,19 +88,6 @@ export default function App() {
     setShowOnboarding(false)
   }
 
-  // ─── OAuth Callback — проверяем И pathname И параметры URL ───
-  const _sp = new URLSearchParams(window.location.search)
-  const isOAuthCallback =
-    window.location.pathname === '/auth/callback' ||
-    (_sp.has('code') && _sp.has('state'))
-
-  console.log('[App] pathname:', window.location.pathname, 'isOAuth:', isOAuthCallback)
-
-  if (isOAuthCallback) {
-    console.log('[App] >>> Rendering OAuthCallback')
-    return <OAuthCallback />
-  }
-
   if (loading) {
     return (
       <div style={{
@@ -146,7 +132,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/instruction" element={<InstructionPage />} />
-          <Route path="/ai-chat" element={<AiChatPage />} />
+            <Route path="/ai-chat" element={<AiChatPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
