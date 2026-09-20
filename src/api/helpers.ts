@@ -1,15 +1,15 @@
 // ==========================================
 // API HELPERS — мост между фронтендом и Supabase
 // Конвертация camelCase ↔ snake_case + CRUD обёртки
-// Версия 2: user_id + RLS (автоматическая фильтрация)
+// Версия 3: оптимизация — убраны Strategy, Achievement, Combo, Descartes
 // ==========================================
 
 import { supabase } from '../lib/supabase'
 import type {
-  Strategy, Goal, PpSmart, ActionStep,
+  Goal, PpSmart, ActionStep,
   DailyEntry, Task, GoalEvaluation,
-  Achievement, Combo, UserSettings,
-  DescartesSquare, ThreePResult, CoachingSession,
+  UserSettings,
+  ThreePResult, CoachingSession,
   GoalReflection, TaskTransfer,
 } from '../types'
 
@@ -171,17 +171,13 @@ export function createTable<T extends { id?: number }>(
 // ГОТОВЫЕ ЭКЗЕМПЛЯРЫ ВСЕХ ТАБЛИЦ
 // ==========================================
 
-export const strategiesTable   = createTable<Strategy>('strategies')
 export const goalsTable        = createTable<Goal>('goals')
 export const ppSmartsTable     = createTable<PpSmart>('pp_smarts')
 export const actionStepsTable  = createTable<ActionStep>('action_steps')
 export const dailyEntriesTable = createTable<DailyEntry>('daily_entries', 'user_id,date')
 export const tasksTable        = createTable<Task>('tasks')
 export const evalTable         = createTable<GoalEvaluation>('goal_evaluations')
-export const achievementsTable = createTable<Achievement>('achievements')
-export const combosTable       = createTable<Combo>('combos')
 export const settingsTable     = createTable<UserSettings>('user_settings', 'user_id')
-export const descartesTable    = createTable<DescartesSquare>('descartes_squares')
 export const threePTable       = createTable<ThreePResult>('three_p_results')
 export const coachingTable     = createTable<CoachingSession>('coaching_sessions')
 export const reflectionsTable  = createTable<GoalReflection>('goal_reflections')

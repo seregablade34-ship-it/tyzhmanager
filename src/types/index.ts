@@ -2,35 +2,23 @@
 // ТИПЫ ДАННЫХ ПРИЛОЖЕНИЯ #тыжменеджер
 // ==========================================
 
-// --- СТРАТЕГИЯ (5 лет) ---
-export interface Strategy {
-  id?: number
-  title: string           // Название стратегической цели
-  description: string     // Описание
-  sphere: string          // Сфера жизни (здоровье, карьера, и т.д.)
-  deadline: string        // Срок (например "2030")
-  status: 'active' | 'completed' | 'cancelled'  // Статус
-  yearGoals?: string[]    // Подцели по годам (до 5 штук)
-  createdAt: string       // Дата создания
-  updatedAt: string       // Дата обновления
-  order: number           // Порядок отображения
-}
-
-// --- ЦЕЛИ НА ГОД ---
+// --- ЦЕЛИ (единый раздел) ---
 export interface MonthProgress {
   checked: boolean        // Отмечен ли месяц
   comment: string         // Комментарий к месяцу
 }
 
+export type GoalPriority = 'absolute' | 'high' | 'medium' | 'low'
+
 export interface Goal {
   id?: number
-  strategyId?: number     // Связь со стратегией (необязательно)
   title: string           // Название цели
   description: string     // Описание
   sphere: string          // Сфера жизни
-  year: number            // Год
+  deadline: string        // Срок (любая дата: "2026-06-30", "2031-12-31")
   status: 'active' | 'completed' | 'cancelled'  // Статус
   progress: number        // Прогресс 0-100
+  priority: GoalPriority  // Приоритет (автоматически от 3П)
   monthlyProgress?: MonthProgress[]  // 12 месяцев (трекер)
   createdAt: string
   updatedAt: string
@@ -40,7 +28,7 @@ export interface Goal {
 // --- PP SMART (детализация цели) ---
 export interface PpSmart {
   id?: number
-  goalId: number          // Связь с целью на год
+  goalId: number          // Связь с целью
   positive: string        // Позитивная формулировка
   personal: string        // Личная ответственность
   specific: string        // Конкретность
@@ -109,7 +97,7 @@ export interface Task {
   date: string            // Дата
   title: string           // Текст задачи
   status: TaskStatus      // Статус задачи
-  priority: TaskPriority  // Приоритет (по Методу 3П)
+  priority: TaskPriority  // Приоритет
   tag?: TaskTag           // Тег (необязательно)
   duration?: number       // Время на задачу в минутах (по умолчанию 60)
   subtasks: SubTask[]     // Подзадачи (декомпозиция)
@@ -128,27 +116,6 @@ export interface GoalEvaluation {
   createdAt: string
 }
 
-// --- ДОСТИЖЕНИЯ (бейджи) ---
-export interface Achievement {
-  id?: number
-  type: string            // Тип достижения
-  title: string           // Название
-  description: string     // Описание
-  icon: string            // Иконка
-  unlockedAt?: string     // Когда получено
-  isUnlocked: boolean     // Разблокировано?
-}
-
-// --- КОМБО (серии дней) ---
-export interface Combo {
-  id?: number
-  type: string            // Тип комбо (daily_fill, tasks_done и т.д.)
-  currentStreak: number   // Текущая серия
-  bestStreak: number      // Лучшая серия
-  lastDate: string        // Последний день серии
-  updatedAt: string
-}
-
 // --- НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ ---
 export interface UserSettings {
   id?: number
@@ -162,21 +129,8 @@ export interface UserSettings {
 }
 
 // ==========================================
-// ОЦЕНКА ЦЕЛЕЙ — 3 инструмента
+// ОЦЕНКА ЦЕЛЕЙ — 2 инструмента
 // ==========================================
-
-// Квадрат Декарта — 4 вопроса, на каждый минимум 3 ответа
-export interface DescartesSquare {
-  id?: number
-  goalId: number
-  doPositive: string[]     // Что случится, если СДЕЛАЮ?
-  dontNegative: string[]   // Что случится, если НЕ сделаю?
-  doNegative: string[]     // Чего НЕ случится, если СДЕЛАЮ?
-  dontPositive: string[]   // Чего НЕ случится, если НЕ сделаю?
-  recommendation: 'do' | 'dont' | 'unclear'  // Результат
-  createdAt: string
-  updatedAt: string
-}
 
 // Метод 3П — простой фильтр ДА/НЕТ
 export type ThreePPriority =
@@ -213,8 +167,7 @@ export interface CoachingSession {
 
 export interface GoalReflection {
   id?: number
-  goalId?: number         // Связь с целью на год (необязательно)
-  strategyId?: number     // Связь со стратегией (необязательно)
+  goalId?: number         // Связь с целью
   type: 'completed' | 'failed'  // Выполнено или не выполнено
 
   // 3 вопроса при ВЫПОЛНЕНИИ

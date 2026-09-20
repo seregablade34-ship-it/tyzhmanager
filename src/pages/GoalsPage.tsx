@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { goalsTable, strategiesTable, reflectionsTable } from '../api/helpers'
-import type { Goal, Strategy, MonthProgress } from '../types'
+import { goalsTable, reflectionsTable } from '../api/helpers'
+import type { Goal, MonthProgress } from '../types'
 import GoalCard from '../components/GoalCard'
 import GoalForm from '../components/GoalForm'
 import ReflectionModal from '../components/ReflectionModal'
@@ -8,11 +8,12 @@ import { fireGoalConfetti } from '../hooks/useConfetti'
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([])
-  const [strategies, setStrategies] = useState<Strategy[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [filterYear, setFilterYear] = useState(new Date().getFullYear())
+
+  // Фильтр по сфере
+  const [filterSphere, setFilterSphere] = useState<string>('all')
 
   // Рефлексия
   const [reflectionGoal, setReflectionGoal] = useState<Goal | null>(null)
@@ -25,12 +26,8 @@ export default function GoalsPage() {
 
   async function loadData() {
     try {
-      const [goalsData, strategiesData] = await Promise.all([
-        goalsTable.getAll('order'),
-        strategiesTable.getAll('order'),
-      ])
+      const goalsData = await goalsTable.getAll('order')
       setGoals(goalsData)
-      setStrategies(strategiesData)
     } catch (error) {
       console.error('Ошибка загрузки:', error)
     } finally {
@@ -38,8 +35,13 @@ export default function GoalsPage() {
     }
   }
 
-  // Фильтруем по году
-  const filteredGoals = goals.filter(g => g.year === filterYear)
+  // Уникальные сферы для фильтра
+  const spheres = [...new Set(goals.map(g => g.sphere))]
+
+  // Фильтруем по сфере
+  const filteredGoals = filterSphere === 'all'
+    ? goals
+    : goals.filter(g => g.sphere === filterSphere)
 
   // Сортировка: активные сверху, потом выполненные, потом отменённые
   const sortedGoals = [...filteredGoals].sort((a, b) => {
@@ -57,19 +59,12 @@ export default function GoalsPage() {
     ? Math.round(filteredGoals.reduce((sum, g) => sum + g.progress, 0) / filteredGoals.length)
     : 0
 
-  // Получить название стратегии по id
-  function getStrategyTitle(strategyId?: number): string | undefined {
-    if (!strategyId) return undefined
-    return strategies.find(s => s.id === strategyId)?.title
-  }
-
   // Добавить / обновить
   async function handleSave(data: {
     title: string
     description: string
     sphere: string
-    year: number
-    strategyId?: number
+    deadline: string
   }) {
     try {
       const now = new Date().toISOString()
@@ -84,6 +79,7 @@ export default function GoalsPage() {
           ...data,
           status: 'active',
           progress: 0,
+          priority: 'medium',
           order: goals.length,
           createdAt: now,
           updatedAt: now,
@@ -170,7 +166,6 @@ export default function GoalsPage() {
       const now = new Date().toISOString()
 
       if (reflectionType === 'completed') {
-        // Ставим 100% и статус completed
         await goalsTable.update(reflectionGoal.id!, {
           status: 'completed',
           progress: 100,
@@ -179,7 +174,6 @@ export default function GoalsPage() {
         // 🎊 Конфетти!
         fireGoalConfetti()
       } else {
-        // Ставим статус cancelled
         await goalsTable.update(reflectionGoal.id!, {
           status: 'cancelled',
           updatedAt: now,
@@ -219,9 +213,9 @@ export default function GoalsPage() {
       {/* Заголовок */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-text">📋 Цели на год</h1>
+          <h1 className="text-2xl font-bold text-text">🎯 Мои цели</h1>
           <p className="text-sm text-text-light mt-1">
-            Конкретные цели с измеримым результатом
+            Все цели — от недельных до стратегических
           </p>
         </div>
 
@@ -241,38 +235,34 @@ export default function GoalsPage() {
         )}
       </div>
 
-      {/* Фильтр по годам */}
-      <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={() => setFilterYear(y => y - 1)}
-          className="w-8 h-8 flex items-center justify-center rounded-lg
-                     bg-bg text-text-light hover:text-text hover:bg-border
-                     transition-colors cursor-pointer"
-        >
-          ◀
-        </button>
-        <span className="text-lg font-bold text-text px-3">
-          {filterYear}
-        </span>
-        <button
-          onClick={() => setFilterYear(y => y + 1)}
-          className="w-8 h-8 flex items-center justify-center rounded-lg
-                     bg-bg text-text-light hover:text-text hover:bg-border
-                     transition-colors cursor-pointer"
-        >
-          ▶
-        </button>
-
-        {filterYear !== new Date().getFullYear() && (
+      {/* Фильтр по сферам */}
+      {spheres.length > 1 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
           <button
-            onClick={() => setFilterYear(new Date().getFullYear())}
-            className="text-sm text-primary hover:text-primary-dark
-                       transition-colors cursor-pointer ml-2"
+            onClick={() => setFilterSphere('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
+              ${filterSphere === 'all'
+                ? 'bg-primary text-white'
+                : 'bg-bg text-text-light hover:bg-border'
+              }`}
           >
-            ↩ Текущий год
+            Все ({goals.length})
           </button>
-        )}
-      </div>
+          {spheres.map(s => (
+            <button
+              key={s}
+              onClick={() => setFilterSphere(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer
+                ${filterSphere === s
+                  ? 'bg-primary text-white'
+                  : 'bg-bg text-text-light hover:bg-border'
+                }`}
+            >
+              {s} ({goals.filter(g => g.sphere === s).length})
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Мини-статистика */}
       {filteredGoals.length > 0 && (
@@ -300,8 +290,6 @@ export default function GoalsPage() {
       {showForm && (
         <GoalForm
           editingGoal={editingGoal}
-          strategies={strategies}
-          currentYear={filterYear}
           onSave={handleSave}
           onCancel={handleCancel}
         />
@@ -310,12 +298,12 @@ export default function GoalsPage() {
       {/* Список целей */}
       {sortedGoals.length === 0 && !showForm ? (
         <div className="text-center py-12">
-          <p className="text-4xl mb-4">📋</p>
+          <p className="text-4xl mb-4">🎯</p>
           <h3 className="text-lg font-semibold text-text mb-2">
-            Нет целей на {filterYear} год
+            Пока нет целей
           </h3>
           <p className="text-text-light mb-6">
-            Добавьте первую цель!
+            Добавьте первую цель — любого масштаба!
           </p>
           <button
             onClick={() => setShowForm(true)}
@@ -332,7 +320,6 @@ export default function GoalsPage() {
             <GoalCard
               key={goal.id}
               goal={goal}
-              strategyTitle={getStrategyTitle(goal.strategyId)}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onProgressChange={handleProgressChange}

@@ -20,9 +20,26 @@ const STATUS_LABELS: Record<string, { text: string; color: string }> = {
   cancelled: { text: 'Не выполнена', color: 'bg-danger/10 text-danger' },
 }
 
+const PRIORITY_LABELS: Record<string, { text: string; color: string }> = {
+  absolute: { text: '🔵 Абсолютный', color: 'bg-blue-100 text-blue-700' },
+  high: { text: '🟢 Высокий', color: 'bg-green-100 text-green-700' },
+  medium: { text: '🟡 Средний', color: 'bg-yellow-100 text-yellow-700' },
+  low: { text: '⚪ Низкий', color: 'bg-gray-100 text-gray-500' },
+}
+
+function formatDeadline(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 interface GoalCardProps {
   goal: Goal
-  strategyTitle?: string
   onEdit: (goal: Goal) => void
   onDelete: (id: number) => void
   onProgressChange: (id: number, progress: number) => void
@@ -33,7 +50,6 @@ interface GoalCardProps {
 
 export default function GoalCard({
   goal,
-  strategyTitle,
   onEdit,
   onDelete,
   onProgressChange,
@@ -45,9 +61,9 @@ export default function GoalCard({
 
   const icon = SPHERE_ICONS[goal.sphere] || '🎯'
   const status = STATUS_LABELS[goal.status] || STATUS_LABELS.active
+  const priority = goal.priority ? PRIORITY_LABELS[goal.priority] : null
   const monthly = goal.monthlyProgress || createEmptyMonthly()
 
-  // Цвет прогресс-бара
   function getProgressColor(progress: number): string {
     if (progress >= 80) return 'bg-success'
     if (progress >= 50) return 'bg-primary'
@@ -55,7 +71,6 @@ export default function GoalCard({
     return 'bg-energy-gray'
   }
 
-  // Рамка карточки по статусу
   const borderClass =
     goal.status === 'completed'
       ? 'border-success/30 bg-success/5'
@@ -79,19 +94,23 @@ export default function GoalCard({
             }`}>
               {goal.title}
             </h3>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="text-xs text-text-light bg-bg px-2 py-0.5 rounded-full">
                 {goal.sphere}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${status.color}`}>
                 {status.text}
               </span>
+              {priority && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${priority.color}`}>
+                  {priority.text}
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex gap-1">
-          {/* Кнопка ПОДЕЛИТЬСЯ */}
           <button
             onClick={() => setShowShare(true)}
             className="w-8 h-8 flex items-center justify-center rounded-lg
@@ -127,11 +146,11 @@ export default function GoalCard({
         </p>
       )}
 
-      {/* Связь со стратегией */}
-      {strategyTitle && (
+      {/* Дедлайн */}
+      {goal.deadline && (
         <div className="mt-2 flex items-center gap-1 text-xs text-primary">
-          <span>🔗</span>
-          <span>{strategyTitle}</span>
+          <span>📅</span>
+          <span>Срок: {formatDeadline(goal.deadline)}</span>
         </div>
       )}
 
@@ -142,7 +161,6 @@ export default function GoalCard({
           <span className="text-xs font-bold text-text">{goal.progress}%</span>
         </div>
 
-        {/* Прогресс-бар */}
         <div className="w-full h-2 bg-bg rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-300 ${getProgressColor(goal.progress)}`}
@@ -150,7 +168,6 @@ export default function GoalCard({
           />
         </div>
 
-        {/* Быстрые кнопки прогресса — только для активных */}
         {goal.status === 'active' && (
           <div className="flex gap-1 mt-2">
             {[0, 25, 50, 75, 100].map(p => (
@@ -170,14 +187,14 @@ export default function GoalCard({
         )}
       </div>
 
-      {/* ===== ТРЕКЕР ПО МЕСЯЦАМ ===== */}
+      {/* Трекер по месяцам */}
       <MonthlyTracker
         monthly={monthly}
         onChange={(updated) => onMonthlyChange(goal.id!, updated)}
         disabled={goal.status !== 'active'}
       />
 
-      {/* ===== КНОПКИ ВЫПОЛНЕНО / НЕ ВЫПОЛНЕНО ===== */}
+      {/* Кнопки выполнено / не выполнено */}
       {goal.status === 'active' && (
         <div className="flex gap-2 mt-4 pt-3 border-t border-border">
           <button
@@ -199,7 +216,6 @@ export default function GoalCard({
         </div>
       )}
 
-      {/* Метка для завершённых */}
       {goal.status === 'completed' && (
         <div className="mt-3 pt-3 border-t border-success/20 text-center">
           <span className="text-sm text-success font-medium">
@@ -216,7 +232,7 @@ export default function GoalCard({
         </div>
       )}
 
-      {/* ===== МОДАЛКА ШЕРИНГА ===== */}
+      {/* Модалка шеринга */}
       <ShareCard
         isOpen={showShare}
         onClose={() => setShowShare(false)}
@@ -225,7 +241,9 @@ export default function GoalCard({
           sphere: goal.sphere,
           progress: goal.progress,
           status: goal.status,
-          year: goal.year,
+          year: goal.deadline
+            ? new Date(goal.deadline).getFullYear()
+            : new Date().getFullYear(),
         }}
       />
     </div>

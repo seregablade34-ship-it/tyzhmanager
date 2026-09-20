@@ -1,53 +1,31 @@
 import { useState, useEffect } from 'react'
-import { strategiesTable, goalsTable } from '../api/helpers'
-import type { Goal, Strategy } from '../types'
+import { goalsTable } from '../api/helpers'
+import type { Goal } from '../types'
 
 interface GoalPickerProps {
-  /** Какие источники показывать */
-  sources?: ('strategies' | 'goals')[]
-  /** Вызывается при выборе цели */
   onSelect: (item: { title: string; description?: string; source: string }) => void
-  /** Закрытие */
   onClose: () => void
 }
 
 export default function GoalPicker({
-  sources = ['strategies', 'goals'],
   onSelect,
   onClose,
 }: GoalPickerProps) {
-  const [strategies, setStrategies] = useState<Strategy[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<'strategies' | 'goals'>(
-    sources.includes('strategies') ? 'strategies' : 'goals'
-  )
 
   useEffect(() => {
     loadData()
   }, [])
 
   async function loadData() {
-    if (sources.includes('strategies')) {
-      const s = await strategiesTable.getAll()
-      setStrategies(s.filter(s => ((s as any).status || 'active') === 'active'))
-    }
-    if (sources.includes('goals')) {
-      const g = await goalsTable.getAll()
-      setGoals(g.filter(g => (g.status || 'active') === 'active'))
-    }
+    const g = await goalsTable.getAll()
+    setGoals(g.filter(g => (g.status || 'active') === 'active'))
   }
 
-  // Фильтрация по поиску
-  const filteredStrategies = strategies.filter(s =>
-    s.title.toLowerCase().includes(search.toLowerCase())
-  )
   const filteredGoals = goals.filter(g =>
     g.title.toLowerCase().includes(search.toLowerCase())
   )
-
-  const currentList = activeTab === 'strategies' ? filteredStrategies : filteredGoals
-  const isEmpty = currentList.length === 0
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -72,36 +50,6 @@ export default function GoalPicker({
           </button>
         </div>
 
-        {/* Табы */}
-        {sources.length > 1 && (
-          <div className="flex border-b border-border">
-            {sources.includes('strategies') && (
-              <button
-                onClick={() => setActiveTab('strategies')}
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
-                  activeTab === 'strategies'
-                    ? 'text-primary border-b-2 border-primary'
-                    : 'text-text-light hover:text-text'
-                }`}
-              >
-                🎯 Стратегия 5 лет ({strategies.length})
-              </button>
-            )}
-            {sources.includes('goals') && (
-              <button
-                onClick={() => setActiveTab('goals')}
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
-                  activeTab === 'goals'
-                    ? 'text-primary border-b-2 border-primary'
-                    : 'text-text-light hover:text-text'
-                }`}
-              >
-                📋 Цели на год ({goals.length})
-              </button>
-            )}
-          </div>
-        )}
-
         {/* Поиск */}
         <div className="p-3 border-b border-border">
           <input
@@ -116,20 +64,20 @@ export default function GoalPicker({
 
         {/* Список */}
         <div className="flex-1 overflow-y-auto p-3">
-          {isEmpty ? (
+          {filteredGoals.length === 0 ? (
             <div className="text-center py-8 text-text-light text-sm">
               {search ? 'Ничего не найдено' : 'Нет активных целей'}
             </div>
           ) : (
             <div className="grid gap-2">
-              {currentList.map(item => (
+              {filteredGoals.map(item => (
                 <button
                   key={item.id}
                   onClick={() =>
                     onSelect({
                       title: item.title,
-                      description: 'description' in item ? item.description : '',
-                      source: activeTab === 'strategies' ? 'Стратегия 5 лет' : 'Цели на год',
+                      description: item.description || '',
+                      source: 'Мои цели',
                     })
                   }
                   className="w-full text-left p-3 border border-border rounded-lg
@@ -141,16 +89,10 @@ export default function GoalPicker({
                       <p className="font-medium text-text text-sm truncate">
                         {item.title}
                       </p>
-                      {'sphere' in item && (
-                        <span className="text-xs text-text-light">
-                          {(item as Strategy).sphere} · {(item as Strategy).deadline}
-                        </span>
-                      )}
-                      {'year' in item && (
-                        <span className="text-xs text-text-light">
-                          {(item as Goal).year}
-                        </span>
-                      )}
+                      <span className="text-xs text-text-light">
+                        {item.sphere}
+                        {item.deadline && ` · до ${new Date(item.deadline).getFullYear()}`}
+                      </span>
                     </div>
                     <span className="text-primary opacity-0 group-hover:opacity-100 transition-opacity ml-2">
                       ➕

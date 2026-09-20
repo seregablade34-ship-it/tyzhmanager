@@ -1,21 +1,17 @@
 // ==========================================
 // БАЗА ДАННЫХ ПРИЛОЖЕНИЯ #тыжменеджер
-// Dexie.js — удобная обёртка над IndexedDB
+// Dexie.js — обёртка над IndexedDB (локальный кэш)
 // ==========================================
 
 import Dexie, { type Table } from 'dexie'
 import type {
-  Strategy,
   Goal,
   PpSmart,
   ActionStep,
   DailyEntry,
   Task,
   GoalEvaluation,
-  Achievement,
-  Combo,
   UserSettings,
-  DescartesSquare,
   ThreePResult,
   CoachingSession,
   GoalReflection,
@@ -25,18 +21,14 @@ import type {
 // Класс нашей базы данных
 class TyzhManagerDB extends Dexie {
   // Объявляем таблицы
-  strategies!: Table<Strategy>
   goals!: Table<Goal>
   ppSmarts!: Table<PpSmart>
   actionSteps!: Table<ActionStep>
   dailyEntries!: Table<DailyEntry>
   tasks!: Table<Task>
   goalEvaluations!: Table<GoalEvaluation>
-  achievements!: Table<Achievement>
-  combos!: Table<Combo>
   userSettings!: Table<UserSettings>
-  // Оценка целей (3 инструмента — без Эйзенхауэра)
-  descartesSquares!: Table<DescartesSquare>
+  // Оценка целей (2 инструмента)
   threePResults!: Table<ThreePResult>
   coachingSessions!: Table<CoachingSession>
   // Рефлексия
@@ -162,6 +154,26 @@ class TyzhManagerDB extends Dexie {
       threePResults:    '++id, goalId',
       coachingSessions: '++id, goalId, isCompleted',
       goalReflections:  '++id, goalId, strategyId, type',
+      taskTransfers:    '++id, taskId, fromDate, toDate, type, reason',
+    })
+
+    // Версия 7 — ОПТИМИЗАЦИЯ: удаляем strategies, achievements, combos, descartes
+    // Goals: убираем strategyId/year, добавляем deadline/priority
+    this.version(7).stores({
+      strategies:       null,
+      achievements:     null,
+      combos:           null,
+      descartesSquares: null,
+      goals:            '++id, sphere, deadline, status, priority, order',
+      ppSmarts:         '++id, goalId',
+      actionSteps:      '++id, goalId, parentId, isCompleted, order',
+      dailyEntries:     '++id, &date',
+      tasks:            '++id, dailyEntryId, goalId, actionStepId, date, status, priority, tag, order',
+      goalEvaluations:  '++id, goalId, date',
+      userSettings:     '++id',
+      threePResults:    '++id, goalId',
+      coachingSessions: '++id, goalId, isCompleted',
+      goalReflections:  '++id, goalId, type',
       taskTransfers:    '++id, taskId, fromDate, toDate, type, reason',
     })
   }

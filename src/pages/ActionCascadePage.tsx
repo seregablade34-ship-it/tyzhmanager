@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { goalsTable, strategiesTable, actionStepsTable, dailyEntriesTable, tasksTable } from '../api/helpers'
-import type { Goal, Strategy, ActionStep } from '../types'
+import { goalsTable, actionStepsTable, dailyEntriesTable, tasksTable } from '../api/helpers'
+import type { Goal, ActionStep } from '../types'
 import ActionStepItem from '../components/ActionStepItem'
 
 export default function ActionCascadePage() {
   const [goals, setGoals] = useState<Goal[]>([])
-  const [strategies, setStrategies] = useState<Strategy[]>([])
   const [steps, setSteps] = useState<ActionStep[]>([])
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -30,13 +29,11 @@ export default function ActionCascadePage() {
 
   async function loadData() {
     try {
-      const [goalsData, strategiesData, stepsData] = await Promise.all([
+      const [goalsData, stepsData] = await Promise.all([
         goalsTable.getAll('order'),
-        strategiesTable.getAll('order'),
         actionStepsTable.getAll('order'),
       ])
       setGoals(goalsData)
-      setStrategies(strategiesData)
       setSteps(stepsData)
 
       if (!selectedGoalId && goalsData.length > 0) {
@@ -63,30 +60,7 @@ export default function ActionCascadePage() {
   const goalsWithSteps = new Set(steps.map(s => s.goalId))
   const selectedGoal = goals.find(g => g.id === selectedGoalId) || null
 
-  // ===== ИМПОРТ ИЗ СТРАТЕГИЙ =====
-  async function handleImportStrategy(_id: number, title: string) {
-    if (!selectedGoalId) return
-    try {
-      const now = new Date().toISOString()
-      const siblings = goalSteps.filter(s => !s.parentId)
-      await actionStepsTable.create({
-        goalId: selectedGoalId,
-        parentId: undefined,
-        title: `🎯 ${title}`,
-        isCompleted: false,
-        order: siblings.length,
-        level: 0,
-        createdAt: now,
-        updatedAt: now,
-      } as Partial<ActionStep>)
-      await loadData()
-      setShowImport(false)
-    } catch (error) {
-      console.error('Ошибка импорта:', error)
-    }
-  }
-
-  // ===== ИМПОРТ ИЗ ЦЕЛЕЙ НА ГОД =====
+  // ===== ИМПОРТ ИЗ ДРУГОЙ ЦЕЛИ =====
   async function handleImportGoal(_id: number, title: string) {
     if (!selectedGoalId) return
     try {
@@ -95,7 +69,7 @@ export default function ActionCascadePage() {
       await actionStepsTable.create({
         goalId: selectedGoalId,
         parentId: undefined,
-        title: `📋 ${title}`,
+        title: `🎯 ${title}`,
         isCompleted: false,
         order: siblings.length,
         level: 0,
@@ -273,14 +247,14 @@ export default function ActionCascadePage() {
   if (goals.length === 0) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold text-text mb-4">🔗 Экшен-каскадирование</h1>
+        <h1 className="text-2xl font-bold text-text mb-4">🪜 Экшен-каскадирование</h1>
         <div className="text-center py-12">
-          <p className="text-4xl mb-4">📋</p>
+          <p className="text-4xl mb-4">🎯</p>
           <h3 className="text-lg font-semibold text-text mb-2">
             Сначала создайте цель
           </h3>
           <p className="text-text-light">
-            Перейдите в «Цели на год» и добавьте хотя бы одну цель.
+            Перейдите в «Мои цели» и добавьте хотя бы одну цель.
           </p>
         </div>
       </div>
@@ -292,7 +266,7 @@ export default function ActionCascadePage() {
 
       {/* Заголовок */}
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-text">🔗 Экшен-каскадирование</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text">🪜 Экшен-каскадирование</h1>
         <p className="text-sm text-text-light mt-1">
           Разбейте цель на конкретные шаги — от крупных к мелким
         </p>
@@ -352,7 +326,6 @@ export default function ActionCascadePage() {
         <>
           {/* Статистика + кнопки */}
           <div className="mb-4">
-            {/* Прогресс-бар */}
             {totalSteps > 0 && (
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex items-center gap-2 flex-1">
@@ -373,7 +346,6 @@ export default function ActionCascadePage() {
               </div>
             )}
 
-            {/* Кнопки — всегда на отдельной строке */}
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -410,35 +382,12 @@ export default function ActionCascadePage() {
           {showImport && (
             <div className="bg-surface border-2 border-warning/20 rounded-xl p-4 mb-4">
               <h3 className="font-semibold text-text mb-3 text-sm flex items-center gap-2">
-                📥 Импорт — добавить шаг из другого блока
+                📥 Импорт — добавить шаг из другой цели
               </h3>
-
-              {strategies.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-text-light mb-2">
-                    🎯 Из стратегии 5 лет:
-                  </p>
-                  <div className="grid gap-1.5">
-                    {strategies.map(s => (
-                      <button
-                        key={s.id}
-                        onClick={() => handleImportStrategy(s.id!, s.title)}
-                        className="w-full text-left px-3 py-2 rounded-lg bg-bg
-                                   hover:bg-primary/10 hover:text-primary
-                                   transition-colors cursor-pointer text-sm
-                                   flex items-center justify-between"
-                      >
-                        <span>{s.title}</span>
-                        <span className="text-xs text-text-light">{s.sphere}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <div>
                 <p className="text-xs font-medium text-text-light mb-2">
-                  📋 Из целей на год:
+                  🎯 Из других целей:
                 </p>
                 <div className="grid gap-1.5">
                   {goals
@@ -577,7 +526,7 @@ export default function ActionCascadePage() {
             </div>
           ) : !showForm && !showImport ? (
             <div className="text-center py-12">
-              <p className="text-4xl mb-4">🔗</p>
+              <p className="text-4xl mb-4">🪜</p>
               <h3 className="text-lg font-semibold text-text mb-2">
                 Каскад пока пуст
               </h3>

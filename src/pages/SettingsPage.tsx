@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import {
-  dailyEntriesTable, tasksTable, goalsTable, strategiesTable,
-  ppSmartsTable, actionStepsTable, descartesTable,
-  threePTable, coachingTable, achievementsTable, combosTable,
+  dailyEntriesTable, tasksTable, goalsTable,
+  ppSmartsTable, actionStepsTable,
+  threePTable, coachingTable,
   transfersTable, reflectionsTable, evalTable, settingsTable,
 } from '../api/helpers'
 
@@ -13,14 +13,10 @@ const ALL_TABLES = [
   { name: 'dailyEntries', table: dailyEntriesTable },
   { name: 'tasks', table: tasksTable },
   { name: 'goals', table: goalsTable },
-  { name: 'strategies', table: strategiesTable },
   { name: 'ppSmarts', table: ppSmartsTable },
   { name: 'actionSteps', table: actionStepsTable },
-  { name: 'descartesSquares', table: descartesTable },
   { name: 'threePResults', table: threePTable },
   { name: 'coachingSessions', table: coachingTable },
-  { name: 'achievements', table: achievementsTable },
-  { name: 'combos', table: combosTable },
   { name: 'taskTransfers', table: transfersTable },
   { name: 'goalReflections', table: reflectionsTable },
   { name: 'goalEvaluations', table: evalTable },

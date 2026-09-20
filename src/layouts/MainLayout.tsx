@@ -2,13 +2,10 @@ import WelcomeModal from '../components/WelcomeModal'
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
-import AchievementToast from '../components/AchievementToast'
-import { useAchievements } from '../hooks/useAchievements'
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
-  const { newAchievement, dismissNew } = useAchievements()
 
   // Автоматически закрываем сайдбар при переходе на другую страницу
   useEffect(() => {
@@ -71,14 +68,6 @@ export default function MainLayout() {
           <Outlet />
         </div>
       </main>
-
-      {/* Глобальный toast — уведомление о достижении */}
-      {newAchievement && (
-        <AchievementToast
-          achievement={newAchievement}
-          onDismiss={dismissNew}
-        />
-      )}
     </div>
   )
 }

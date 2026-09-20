@@ -1,6 +1,4 @@
 import { NavLink } from 'react-router-dom'
-import { useCombo } from '../hooks/useCombo'
-import { useAchievements } from '../hooks/useAchievements'
 import { supabase } from '../lib/supabase'
 
 const NAV_GROUPS = [
@@ -13,24 +11,17 @@ const NAV_GROUPS = [
   {
     label: 'Цели',
     items: [
-      { to: '/strategy',   icon: '🎯', label: 'Стратегия 5 лет' },
-      { to: '/goals',      icon: '📋', label: 'Цели на год' },
-      { to: '/evaluation', icon: '⚖️', label: 'Оценка целей' },
+      { to: '/goals',      icon: '🎯', label: 'Мои цели' },
+      { to: '/three-p',    icon: '🔍', label: 'Метод 3П' },
+      { to: '/coaching',   icon: '💬', label: 'Самокоучинг' },
       { to: '/cascade',    icon: '🪜', label: 'Экшен-каскад' },
       { to: '/pp-smart',   icon: '🧩', label: 'PP SMART' },
     ],
   },
-{
+  {
     label: 'ИИ ПроТрекинг',
     items: [
       { to: '/ai-chat', icon: '🧠', label: 'Вектор' },
-    ],
-  },
-  {
-    label: 'Прогресс',
-    items: [
-      { to: '/achievements', icon: '🏆', label: 'Достижения' },
-      { to: '/stats',        icon: '📊', label: 'Статистика' },
     ],
   },
   {
@@ -44,8 +35,6 @@ const NAV_GROUPS = [
 ]
 
 export default function Sidebar() {
-  const { currentCombo, todayCompleted } = useCombo()
-  const { rank, xpProgress, totalXp } = useAchievements()
 
   async function handleLogout() {
     localStorage.removeItem('tyzhmanager_remember')
@@ -59,45 +48,6 @@ export default function Sidebar() {
       <div className="p-4 border-b border-border">
         <h1 className="text-lg font-bold text-primary">#тыжменеджер</h1>
         <p className="text-xs text-text-light">дневник целей</p>
-      </div>
-
-      {/* === КОМБО + РАНГ === */}
-      <div className="px-4 py-3 border-b border-border">
-        {/* Комбо */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">{currentCombo > 0 ? '🔥' : '💤'}</span>
-          <div>
-            <p className="text-sm font-semibold text-text">
-              {currentCombo > 0
-                ? `Комбо: ${currentCombo} ${currentCombo === 1 ? 'день' : currentCombo >= 2 && currentCombo <= 4 ? 'дня' : 'дней'}`
-                : 'Нет комбо'
-              }
-            </p>
-            <p className="text-xs text-text-light">
-              {todayCompleted ? '✅ Сегодня есть!' : '⏳ Заполни ежедневник'}
-            </p>
-          </div>
-        </div>
-
-        {/* Ранг */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">{rank.icon}</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-text">{rank.title}</p>
-            <p className="text-xs text-text-light">{totalXp} XP</p>
-          </div>
-        </div>
-
-        {/* Прогресс-бар XP */}
-        <div className="w-full bg-bg rounded-full h-1.5">
-          <div
-            className="bg-primary rounded-full h-1.5 transition-all duration-500"
-            style={{ width: `${xpProgress.percent}%` }}
-          />
-        </div>
-        <p className="text-xs text-text-light mt-1 text-right">
-          {xpProgress.current}/{xpProgress.needed} XP
-        </p>
       </div>
 
       {/* === НАВИГАЦИЯ С ГРУППАМИ === */}

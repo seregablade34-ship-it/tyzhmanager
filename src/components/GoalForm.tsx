@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { Goal, Strategy } from '../types'
+import type { Goal } from '../types'
 import CalendarPopup from './CalendarPopup'
 import { Calendar } from 'lucide-react'
 
@@ -8,7 +8,6 @@ const SPHERES = [
   'Семья', 'Развитие', 'Хобби', 'Духовность',
 ]
 
-// Форматирование даты
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -22,52 +21,39 @@ function formatDate(dateStr: string): string {
 
 interface GoalFormProps {
   editingGoal?: Goal | null
-  strategies: Strategy[]
-  currentYear: number
   onSave: (data: {
     title: string
     description: string
     sphere: string
-    year: number
-    deadline?: string
-    strategyId?: number
+    deadline: string
   }) => void
   onCancel: () => void
 }
 
 export default function GoalForm({
   editingGoal,
-  strategies,
-  currentYear,
   onSave,
   onCancel,
 }: GoalFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [sphere, setSphere] = useState(SPHERES[0])
-  const [year, setYear] = useState(currentYear)
   const [deadline, setDeadline] = useState('')
-  const [strategyId, setStrategyId] = useState<number | undefined>(undefined)
   const [showCalendar, setShowCalendar] = useState(false)
 
-  // Заполнить форму при редактировании
   useEffect(() => {
     if (editingGoal) {
       setTitle(editingGoal.title)
       setDescription(editingGoal.description)
       setSphere(editingGoal.sphere)
-      setYear(editingGoal.year)
-      setDeadline((editingGoal as any).deadline || '')
-      setStrategyId(editingGoal.strategyId)
+      setDeadline(editingGoal.deadline || '')
     } else {
       setTitle('')
       setDescription('')
       setSphere(SPHERES[0])
-      setYear(currentYear)
       setDeadline('')
-      setStrategyId(undefined)
     }
-  }, [editingGoal, currentYear])
+  }, [editingGoal])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -76,19 +62,16 @@ export default function GoalForm({
       title: title.trim(),
       description: description.trim(),
       sphere,
-      year,
-      deadline: deadline || undefined,
-      strategyId,
+      deadline: deadline || '',
     })
   }
 
-  // Дефолтная дата для календаря — конец выбранного года
-  const calendarDefault = deadline || `${year}-12-31`
+  const calendarDefault = deadline || `${new Date().getFullYear()}-12-31`
 
   return (
     <div className="bg-surface border-2 border-primary/20 rounded-xl p-4 mb-4">
       <h3 className="font-semibold text-text mb-4">
-        {editingGoal ? '✏️ Редактировать цель' : '➕ Новая цель на год'}
+        {editingGoal ? '✏️ Редактировать цель' : '➕ Новая цель'}
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -127,44 +110,28 @@ export default function GoalForm({
           />
         </div>
 
-        {/* Сфера и Год */}
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-text-light mb-1">
-              Сфера жизни
-            </label>
-            <select
-              value={sphere}
-              onChange={(e) => setSphere(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-border
-                         bg-bg text-text focus:outline-none focus:ring-2
-                         focus:ring-primary/30 focus:border-primary transition-colors"
-            >
-              {SPHERES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="w-28">
-            <label className="block text-sm font-medium text-text-light mb-1">
-              Год
-            </label>
-            <input
-              type="number"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg border border-border
-                         bg-bg text-text focus:outline-none focus:ring-2
-                         focus:ring-primary/30 focus:border-primary transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* ===== ДЕДЛАЙН — КНОПКА С КАЛЕНДАРЁМ ===== */}
+        {/* Сфера */}
         <div>
           <label className="block text-sm font-medium text-text-light mb-1">
-            📅 Дедлайн (необязательно)
+            Сфера жизни
+          </label>
+          <select
+            value={sphere}
+            onChange={(e) => setSphere(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-border
+                       bg-bg text-text focus:outline-none focus:ring-2
+                       focus:ring-primary/30 focus:border-primary transition-colors"
+          >
+            {SPHERES.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Дедлайн */}
+        <div>
+          <label className="block text-sm font-medium text-text-light mb-1">
+            📅 Срок (любая дата)
           </label>
           <div className="flex gap-2">
             <button
@@ -196,29 +163,6 @@ export default function GoalForm({
           </div>
         </div>
 
-        {/* Связь со стратегией */}
-        {strategies.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-text-light mb-1">
-              🔗 Привязать к стратегии (необязательно)
-            </label>
-            <select
-              value={strategyId ?? ''}
-              onChange={(e) => setStrategyId(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full px-3 py-2 rounded-lg border border-border
-                         bg-bg text-text focus:outline-none focus:ring-2
-                         focus:ring-primary/30 focus:border-primary transition-colors"
-            >
-              <option value="">— Без привязки —</option>
-              {strategies.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.title} ({s.sphere})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         {/* Кнопки */}
         <div className="flex gap-2 pt-2">
           <button
@@ -239,7 +183,6 @@ export default function GoalForm({
         </div>
       </form>
 
-      {/* ===== ВСПЛЫВАЮЩИЙ КАЛЕНДАРЬ ===== */}
       <CalendarPopup
         isOpen={showCalendar}
         onClose={() => setShowCalendar(false)}

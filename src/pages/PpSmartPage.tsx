@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { goalsTable, strategiesTable, ppSmartsTable } from '../api/helpers'
-import type { Goal, Strategy, PpSmart } from '../types'
+import { goalsTable, ppSmartsTable } from '../api/helpers'
+import type { Goal, PpSmart } from '../types'
 import PpSmartForm from '../components/PpSmartForm'
 
 const FIELD_INFO = [
@@ -12,8 +12,6 @@ const FIELD_INFO = [
   { key: 'relevant', letter: 'R', title: 'Relevant — Релевантная', emoji: '🧭' },
   { key: 'timeBound', letter: 'T', title: 'Time-bound — Ограниченная по времени', emoji: '⏰' },
 ]
-
-const STRATEGY_OFFSET = 100000
 
 function generateFormulation(ppSmart: PpSmart): string {
   const parts: string[] = []
@@ -32,7 +30,6 @@ function generateFormulation(ppSmart: PpSmart): string {
 
 export default function PpSmartPage() {
   const [goals, setGoals] = useState<Goal[]>([])
-  const [strategies, setStrategies] = useState<Strategy[]>([])
   const [ppSmarts, setPpSmarts] = useState<PpSmart[]>([])
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -47,20 +44,16 @@ export default function PpSmartPage() {
 
   async function loadData() {
     try {
-      const [goalsData, strategiesData, ppSmartsData] = await Promise.all([
+      const [goalsData, ppSmartsData] = await Promise.all([
         goalsTable.getAll('order'),
-        strategiesTable.getAll('order'),
         ppSmartsTable.getAll(),
       ])
       setGoals(goalsData)
-      setStrategies(strategiesData)
       setPpSmarts(ppSmartsData)
 
       if (!selectedGoalId && mode === 'linked') {
         if (goalsData.length > 0) {
           setSelectedGoalId(goalsData[0].id!)
-        } else if (strategiesData.length > 0) {
-          setSelectedGoalId(strategiesData[0].id! + STRATEGY_OFFSET)
         }
       }
     } catch (error) {
@@ -72,22 +65,14 @@ export default function PpSmartPage() {
 
   function getSelectedTitle(): string {
     if (!selectedGoalId) return ''
-    if (selectedGoalId >= STRATEGY_OFFSET) {
-      const s = strategies.find(s => s.id === selectedGoalId - STRATEGY_OFFSET)
-      return s?.title || ''
-    }
     const g = goals.find(g => g.id === selectedGoalId)
     return g?.title || ''
   }
 
   function getLinkTitle(goalId: number): string {
     if (!goalId || goalId === 0) return ''
-    if (goalId >= STRATEGY_OFFSET) {
-      const s = strategies.find(s => s.id === goalId - STRATEGY_OFFSET)
-      return s ? `🎯 Стратегия: «${s.title}»` : '⚠️ Стратегия удалена'
-    }
     const g = goals.find(g => g.id === goalId)
-    return g ? `📋 Цель: «${g.title}»` : '⚠️ Цель удалена'
+    return g ? `🎯 Цель: «${g.title}»` : '⚠️ Цель удалена'
   }
 
   const currentPpSmart = mode === 'linked'
@@ -188,21 +173,21 @@ export default function PpSmartPage() {
     setEditingPpSmart(null)
   }
 
-  // ═══ Создать ЦЕЛЬ НА ГОД из PP SMART ═══
+  // ═══ Создать ЦЕЛЬ из PP SMART ═══
   async function handleAddToGoals(ppSmart: PpSmart) {
     try {
       const formulation = generateFormulation(ppSmart)
       const title = ppSmart.positive.trim() || 'Цель из PP SMART'
       const now = new Date().toISOString()
-      const currentYear = new Date().getFullYear()
 
       const created = await goalsTable.create({
         title,
         description: formulation,
         sphere: 'Развитие',
-        year: currentYear,
+        deadline: `${new Date().getFullYear()}-12-31`,
         status: 'active',
         progress: 0,
+        priority: 'medium',
         order: goals.length,
         createdAt: now,
         updatedAt: now,
@@ -222,45 +207,11 @@ export default function PpSmartPage() {
     }
   }
 
-  // ═══ Создать СТРАТЕГИЮ из PP SMART ═══
-  async function handleAddToStrategy(ppSmart: PpSmart) {
-    try {
-      const formulation = generateFormulation(ppSmart)
-      const title = ppSmart.positive.trim() || 'Стратегия из PP SMART'
-      const now = new Date().toISOString()
-      const currentYear = new Date().getFullYear()
-
-      const created = await strategiesTable.create({
-        title,
-        description: formulation,
-        sphere: 'Развитие',
-        deadline: `${currentYear + 5}-12-31`,
-        status: 'active',
-        order: strategies.length,
-        createdAt: now,
-        updatedAt: now,
-      })
-
-      const virtualId = (created.id as number) + STRATEGY_OFFSET
-      await ppSmartsTable.update(ppSmart.id!, {
-        goalId: virtualId,
-        updatedAt: now,
-      })
-
-      await loadData()
-      setMode('linked')
-      setSelectedGoalId(virtualId)
-    } catch (error) {
-      console.error('Ошибка создания стратегии:', error)
-    }
-  }
-
   const selectedTitle = getSelectedTitle()
 
-  // ═══ СПИСОК ЦЕЛЕЙ/СТРАТЕГИЙ ДЛЯ ПРИВЯЗКИ ═══
+  // ═══ СПИСОК ЦЕЛЕЙ ДЛЯ ПРИВЯЗКИ ═══
   function renderLinkList(ppSmart: PpSmart) {
-    const hasTargets = goals.length > 0 || strategies.length > 0
-    if (!hasTargets) return null
+    if (goals.length === 0) return null
 
     return (
       <div className="mt-4 bg-warning/5 border border-warning/20 rounded-lg p-3">
@@ -287,25 +238,9 @@ export default function PpSmartPage() {
                            : 'bg-bg hover:bg-primary/10 hover:text-primary'
                          }`}
             >
-              <span>📋 {g.title}</span>
+              <span>🎯 {g.title}</span>
               <span className="text-text-light">{g.sphere}</span>
               {ppSmart.goalId === g.id && <span className="ml-auto">✔</span>}
-            </button>
-          ))}
-          {strategies.map(s => (
-            <button
-              key={s.id! + STRATEGY_OFFSET}
-              onClick={() => handleLink(ppSmart.id!, s.id! + STRATEGY_OFFSET)}
-              className={`text-left text-xs px-3 py-1.5 rounded-lg
-                         transition-colors cursor-pointer flex items-center gap-2
-                         ${ppSmart.goalId === s.id! + STRATEGY_OFFSET
-                           ? 'bg-primary/10 text-primary font-medium'
-                           : 'bg-bg hover:bg-primary/10 hover:text-primary'
-                         }`}
-            >
-              <span>🎯 {s.title}</span>
-              <span className="text-warning">стратегия</span>
-              {ppSmart.goalId === s.id! + STRATEGY_OFFSET && <span className="ml-auto">✔</span>}
             </button>
           ))}
         </div>
@@ -318,7 +253,6 @@ export default function PpSmartPage() {
     const isFree = !ppSmart.goalId || ppSmart.goalId === 0
     const isRelinking = relinkingId === ppSmart.id
 
-    // Проверяем, жива ли привязка
     const linkTitle = isFree ? '' : getLinkTitle(ppSmart.goalId)
     const isOrphan = !isFree && linkTitle.startsWith('⚠️')
 
@@ -335,7 +269,6 @@ export default function PpSmartPage() {
             )}
           </div>
           <div className="flex gap-1">
-            {/* Кнопка смены привязки */}
             {!isFree && (
               <button
                 onClick={() => setRelinkingId(isRelinking ? null : ppSmart.id!)}
@@ -355,7 +288,6 @@ export default function PpSmartPage() {
               className="w-8 h-8 flex items-center justify-center rounded-lg
                          text-text-light hover:text-primary hover:bg-primary/10
                          transition-colors cursor-pointer text-sm"
-              title="Редактировать"
             >
               ✏️
             </button>
@@ -364,7 +296,6 @@ export default function PpSmartPage() {
               className="w-8 h-8 flex items-center justify-center rounded-lg
                          text-text-light hover:text-danger hover:bg-danger/10
                          transition-colors cursor-pointer text-sm"
-              title="Удалить"
             >
               🗑️
             </button>
@@ -400,43 +331,29 @@ export default function PpSmartPage() {
           </div>
         )}
 
-        {/* ═══ КНОПКИ Создать цель/стратегию (для СВОБОДНЫХ) ═══ */}
+        {/* Кнопка создать цель (для свободных) */}
         {isFree && formulation && (
           <div className="mt-4 bg-success/5 border-2 border-success/20 rounded-xl p-4">
             <p className="text-sm font-bold text-text mb-3">
               🚀 Создать цель из этого PP SMART:
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleAddToGoals(ppSmart)}
-                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg
-                           hover:bg-primary-dark transition-colors cursor-pointer
-                           font-medium text-sm flex items-center justify-center gap-2"
-              >
-                📋 В Цели на год
-              </button>
-              <button
-                onClick={() => handleAddToStrategy(ppSmart)}
-                className="flex-1 px-4 py-2.5 bg-warning/10 text-warning border border-warning/30 rounded-lg
-                           hover:bg-warning/20 transition-colors cursor-pointer
-                           font-medium text-sm flex items-center justify-center gap-2"
-              >
-                🎯 В Стратегию 5 лет
-              </button>
-            </div>
-            <p className="text-[10px] text-text-light mt-2">
-              Название = поле Positive · Описание = итоговая формулировка · Сферу можно изменить позже
-            </p>
+            <button
+              onClick={() => handleAddToGoals(ppSmart)}
+              className="w-full px-4 py-2.5 bg-primary text-white rounded-lg
+                         hover:bg-primary-dark transition-colors cursor-pointer
+                         font-medium text-sm flex items-center justify-center gap-2"
+            >
+              🎯 В Мои цели
+            </button>
           </div>
         )}
 
-        {/* ═══ ПРИВЯЗКА для СВОБОДНЫХ ═══ */}
+        {/* Привязка для свободных */}
         {isFree && renderLinkList(ppSmart)}
 
-        {/* ═══ СМЕНА ПРИВЯЗКИ для ПРИВЯЗАННЫХ ═══ */}
+        {/* Смена привязки для привязанных */}
         {!isFree && isRelinking && (
           <div className="mt-4">
-            {/* Кнопка отвязать */}
             <button
               onClick={() => handleUnlink(ppSmart.id!)}
               className="w-full mb-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg
@@ -445,17 +362,15 @@ export default function PpSmartPage() {
             >
               🔓 Отвязать (сделать свободным)
             </button>
-
-            {/* Список для перепривязки */}
             {renderLinkList(ppSmart)}
           </div>
         )}
 
-        {/* ═══ Предупреждение: привязка удалена ═══ */}
+        {/* Предупреждение: привязка удалена */}
         {isOrphan && !isRelinking && (
           <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
             <p className="text-xs text-red-600 font-medium mb-2">
-              ⚠️ Цель/стратегия была удалена. Перепривяжите PP SMART:
+              ⚠️ Цель была удалена. Перепривяжите PP SMART:
             </p>
             <div className="flex gap-2">
               <button
@@ -494,7 +409,7 @@ export default function PpSmartPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-text">🎯 PP SMART</h1>
+          <h1 className="text-2xl font-bold text-text">🧩 PP SMART</h1>
           <p className="text-sm text-text-light mt-1">
             Детализация целей по авторской методологии
           </p>
@@ -543,97 +458,46 @@ export default function PpSmartPage() {
 
       {mode === 'linked' && !showForm && (
         <>
-          {(goals.length > 0 || strategies.length > 0) && (
+          {goals.length > 0 && (
             <div className="bg-surface border border-border rounded-xl p-4 mb-6">
               <label className="block text-sm font-medium text-text-light mb-2">
                 Выберите цель для PP SMART:
               </label>
-
-              {goals.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs font-medium text-text-light mb-1.5">📋 Цели на год:</p>
-                  <div className="grid gap-1.5">
-                    {goals.map(goal => {
-                      const hasPpSmart = goalsWithPpSmart.has(goal.id!)
-                      const isSelected = selectedGoalId === goal.id
-                      return (
-                        <button
-                          key={goal.id}
-                          onClick={() => {
-                            setSelectedGoalId(goal.id!)
-                            setShowForm(false)
-                            setEditingPpSmart(null)
-                            setRelinkingId(null)
-                          }}
-                          className={`w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
-                            flex items-center justify-between
-                            ${isSelected
-                              ? 'bg-primary/10 border-2 border-primary text-text'
-                              : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
-                            }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{goal.title}</span>
-                            <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
-                              {goal.sphere}
-                            </span>
-                          </div>
-                          {hasPpSmart ? (
-                            <span className="text-xs text-success font-medium">✅ Есть</span>
-                          ) : (
-                            <span className="text-xs text-text-light">—</span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {strategies.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-text-light mb-1.5">🎯 Стратегия 5 лет:</p>
-                  <div className="grid gap-1.5">
-                    {strategies.map(strategy => {
-                      const virtualId = strategy.id! + STRATEGY_OFFSET
-                      const hasPpSmart = goalsWithPpSmart.has(virtualId)
-                      const isSelected = selectedGoalId === virtualId
-                      return (
-                        <button
-                          key={virtualId}
-                          onClick={() => {
-                            setSelectedGoalId(virtualId)
-                            setShowForm(false)
-                            setEditingPpSmart(null)
-                            setRelinkingId(null)
-                          }}
-                          className={`w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
-                            flex items-center justify-between
-                            ${isSelected
-                              ? 'bg-primary/10 border-2 border-primary text-text'
-                              : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
-                            }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{strategy.title}</span>
-                            <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
-                              {strategy.sphere}
-                            </span>
-                            <span className="text-xs text-warning bg-warning/10 px-2 py-0.5 rounded-full">
-                              🎯 стратегия
-                            </span>
-                          </div>
-                          {hasPpSmart ? (
-                            <span className="text-xs text-success font-medium">✅ Есть</span>
-                          ) : (
-                            <span className="text-xs text-text-light">—</span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+              <div className="grid gap-1.5">
+                {goals.map(goal => {
+                  const hasPpSmart = goalsWithPpSmart.has(goal.id!)
+                  const isSelected = selectedGoalId === goal.id
+                  return (
+                    <button
+                      key={goal.id}
+                      onClick={() => {
+                        setSelectedGoalId(goal.id!)
+                        setShowForm(false)
+                        setEditingPpSmart(null)
+                        setRelinkingId(null)
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-all cursor-pointer
+                        flex items-center justify-between
+                        ${isSelected
+                          ? 'bg-primary/10 border-2 border-primary text-text'
+                          : 'bg-bg border-2 border-transparent text-text-light hover:bg-border'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{goal.title}</span>
+                        <span className="text-xs text-text-light bg-surface px-2 py-0.5 rounded-full">
+                          {goal.sphere}
+                        </span>
+                      </div>
+                      {hasPpSmart ? (
+                        <span className="text-xs text-success font-medium">✅ Есть</span>
+                      ) : (
+                        <span className="text-xs text-text-light">—</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -643,7 +507,7 @@ export default function PpSmartPage() {
 
               {!currentPpSmart && (
                 <div className="text-center py-8">
-                  <p className="text-4xl mb-4">🎯</p>
+                  <p className="text-4xl mb-4">🧩</p>
                   <h3 className="text-lg font-semibold text-text mb-2">PP SMART не создан</h3>
                   <p className="text-text-light mb-6">
                     Детализируйте цель «{selectedTitle}» по 7 критериям
@@ -664,12 +528,12 @@ export default function PpSmartPage() {
             </>
           )}
 
-          {goals.length === 0 && strategies.length === 0 && (
+          {goals.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-4xl mb-4">📋</p>
+              <p className="text-4xl mb-4">🎯</p>
               <h3 className="text-lg font-semibold text-text mb-2">Нет целей для привязки</h3>
               <p className="text-text-light mb-4">
-                Создайте цель в «Цели на год» или «Стратегия 5 лет»,
+                Создайте цель в «Мои цели»,
                 или используйте свободный PP SMART.
               </p>
               <button
