@@ -10,6 +10,8 @@ import DailyPage from './pages/DailyPage'
 import GoalsPage from './pages/GoalsPage'
 import ActionCascadePage from './pages/ActionCascadePage'
 import PpSmartPage from './pages/PpSmartPage'
+import ThreePPage from './pages/ThreePPage'
+import CoachingPage from './pages/CoachingPage'
 import SettingsPage from './pages/SettingsPage'
 import AboutPage from './pages/AboutPage'
 import InstructionPage from './pages/InstructionPage'
@@ -119,6 +121,8 @@ export default function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<DailyPage />} />
             <Route path="/goals" element={<GoalsPage />} />
+            <Route path="/three-p" element={<ThreePPage />} />
+            <Route path="/coaching" element={<CoachingPage />} />
             <Route path="/cascade" element={<ActionCascadePage />} />
             <Route path="/pp-smart" element={<PpSmartPage />} />
             <Route path="/settings" element={<SettingsPage />} />
