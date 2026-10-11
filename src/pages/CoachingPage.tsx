@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { goalsTable, coachingTable } from '../api/helpers'
 import type { Goal, CoachingSession } from '../types'
 
@@ -27,6 +27,9 @@ export default function CoachingPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [showResult, setShowResult] = useState(false)
 
+  // Флаг: пропускать ли useEffect при обновлении sessions
+  const skipSessionEffect = useRef(false)
+
   useEffect(() => {
     loadData()
   }, [])
@@ -52,6 +55,12 @@ export default function CoachingPage() {
 
   // Загрузить существующую сессию при выборе цели
   useEffect(() => {
+    // Пропускаем, если это было автосохранение
+    if (skipSessionEffect.current) {
+      skipSessionEffect.current = false
+      return
+    }
+
     if (!selectedGoalId) return
     const existing = sessions.find(s => s.goalId === selectedGoalId)
     if (existing) {
@@ -72,16 +81,21 @@ export default function CoachingPage() {
   const selectedGoal = goals.find(g => g.id === selectedGoalId) || null
 
   // ===== СОХРАНИТЬ СЕССИЮ =====
-  async function handleSave(completed: boolean) {
+  async function handleSave(completed: boolean, stepOverride?: number) {
     if (!selectedGoalId) return
+
+    const stepToSave = stepOverride !== undefined ? stepOverride : currentStep
 
     try {
       const now = new Date().toISOString()
 
+      // Ставим флаг — не сбрасывать шаг в useEffect
+      skipSessionEffect.current = true
+
       if (existingSession) {
         await coachingTable.update(existingSession.id!, {
           answers,
-          currentStep: completed ? 9 : currentStep,
+          currentStep: completed ? 9 : stepToSave,
           isCompleted: completed,
           updatedAt: now,
         })
@@ -89,7 +103,7 @@ export default function CoachingPage() {
         await coachingTable.create({
           goalId: selectedGoalId,
           answers,
-          currentStep: completed ? 9 : currentStep,
+          currentStep: completed ? 9 : stepToSave,
           isCompleted: completed,
           createdAt: now,
           updatedAt: now,
@@ -103,6 +117,7 @@ export default function CoachingPage() {
       }
     } catch (error) {
       console.error('Ошибка сохранения:', error)
+      skipSessionEffect.current = false
     }
   }
 
@@ -127,13 +142,12 @@ export default function CoachingPage() {
   // Следующий вопрос
   function handleNext() {
     if (currentStep < 9) {
-      setCurrentStep(currentStep + 1)
+      const nextStep = currentStep + 1
+      setCurrentStep(nextStep)
+      // Автосохранение с НОВЫМ шагом
+      handleSave(false, nextStep)
     } else {
       handleSave(true)
-    }
-    // Автосохранение
-    if (currentStep < 9) {
-      handleSave(false)
     }
   }
 
