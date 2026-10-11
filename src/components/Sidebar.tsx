@@ -19,12 +19,6 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'ИИ ПроТрекинг',
-    items: [
-      { to: '/ai-chat', icon: '🧠', label: 'Вектор' },
-    ],
-  },
-  {
     label: '',
     items: [
       { to: '/settings',    icon: '⚙️', label: 'Настройки' },
