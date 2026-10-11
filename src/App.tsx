@@ -1,7 +1,3 @@
-// ==========================================
-// ГЛАВНЫЙ ФАЙЛ ПРИЛОЖЕНИЯ
-// ==========================================
-
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -12,6 +8,7 @@ import ActionCascadePage from './pages/ActionCascadePage'
 import PpSmartPage from './pages/PpSmartPage'
 import ThreePPage from './pages/ThreePPage'
 import CoachingPage from './pages/CoachingPage'
+import StatsPage from './pages/StatsPage'
 import SettingsPage from './pages/SettingsPage'
 import AboutPage from './pages/AboutPage'
 import InstructionPage from './pages/InstructionPage'
@@ -124,6 +121,7 @@ export default function App() {
             <Route path="/coaching" element={<CoachingPage />} />
             <Route path="/cascade" element={<ActionCascadePage />} />
             <Route path="/pp-smart" element={<PpSmartPage />} />
+            <Route path="/stats" element={<StatsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/instruction" element={<InstructionPage />} />

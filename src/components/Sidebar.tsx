@@ -19,6 +19,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Аналитика',
+    items: [
+      { to: '/stats', icon: '📊', label: 'Статистика' },
+    ],
+  },
+  {
     label: '',
     items: [
       { to: '/settings',    icon: '⚙️', label: 'Настройки' },
@@ -44,11 +50,10 @@ export default function Sidebar() {
         <p className="text-xs text-text-light">дневник целей</p>
       </div>
 
-      {/* === НАВИГАЦИЯ С ГРУППАМИ === */}
+      {/* === НАВИГАЦИЯ === */}
       <nav className="flex-1 overflow-y-auto py-2">
         {NAV_GROUPS.map((group, groupIndex) => (
           <div key={groupIndex}>
-            {/* Заголовок группы */}
             {group.label && (
               <div className="px-4 pt-4 pb-1 first:pt-2">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-text-light/60">
@@ -57,12 +62,10 @@ export default function Sidebar() {
               </div>
             )}
 
-            {/* Разделитель перед последней группой (без заголовка) */}
             {!group.label && (
               <div className="mx-4 my-2 border-t border-border" />
             )}
 
-            {/* Пункты меню */}
             {group.items.map(item => (
               <NavLink
                 key={item.to}
@@ -83,12 +86,12 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* === КНОПКА ВЫХОДА === */}
+      {/* === ВЫХОД === */}
       <div className="p-3 border-t border-border">
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-sm
-                     text-red-400 hover:bg-red-50 hover:text-red-600
+                     text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600
                      transition-colors cursor-pointer"
         >
           <span className="text-base">🚪</span>

@@ -29,8 +29,6 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [gender, setGender] = useState('')
-  const [referralCode, setReferralCode] = useState('')
-  const [promoInput, setPromoInput] = useState('')
   const [profileLoading, setProfileLoading] = useState(true)
 
   // ─── OAuth ───
@@ -64,26 +62,39 @@ export default function SettingsPage() {
 
       setEmail(user.email || '')
 
-      // Проверяем OAuth
       const meta = user.user_metadata || {}
       const isOAuth = !!meta.auth_provider
       setIsOAuthUser(isOAuth)
       setAuthProvider(meta.auth_provider || '')
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (profile) {
-        // Приоритет: profile.display_name → metadata.full_name → пусто
         const name = profile.display_name || meta.full_name || ''
-        // Не показываем email как имя
         setDisplayName(name.includes('@') ? '' : name)
         setBirthDate(profile.birth_date || '')
         setGender(profile.gender || '')
-        setReferralCode(profile.referral_code || '')
+      } else if (!error || error.code === 'PGRST116') {
+        // Профиль не найден — создаём автоматически
+        const defaultName = meta.full_name || ''
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: user.id,
+            display_name: defaultName.includes('@') ? '' : defaultName,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+
+        if (!insertError) {
+          setDisplayName(defaultName.includes('@') ? '' : defaultName)
+        } else {
+          console.error('Ошибка создания профиля:', insertError)
+        }
       }
     } catch (err) {
       console.error('Ошибка загрузки профиля:', err)
@@ -135,35 +146,6 @@ export default function SettingsPage() {
       showStatus('✅ Пароль изменён!')
     } catch (err: any) {
       showStatus(`❌ Ошибка: ${err.message}`)
-      console.error(err)
-    }
-  }
-
-  // ─── Реферальная ссылка ───
-  function handleCopyReferral() {
-    const link = `https://tyzhmanager.ru?ref=${referralCode}`
-    navigator.clipboard.writeText(link)
-    showStatus('📋 Реферальная ссылка скопирована!')
-  }
-
-  // ─── Промокод ───
-  async function handleActivatePromo() {
-    if (!promoInput.trim()) {
-      showStatus('❌ Введите промокод')
-      return
-    }
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ promo_used: promoInput.trim(), updated_at: new Date().toISOString() })
-        .eq('id', user.id)
-      if (error) throw error
-      setPromoInput('')
-      showStatus('✅ Промокод активирован!')
-    } catch (err) {
-      showStatus('❌ Ошибка активации промокода')
       console.error(err)
     }
   }
@@ -463,52 +445,6 @@ export default function SettingsPage() {
           </button>
         </div>
       )}
-
-      {/* Реферальная ссылка */}
-      <div className="bg-surface border border-border rounded-xl p-5 mb-6">
-        <h2 className="text-lg font-semibold text-text mb-3">🔗 Реферальная ссылка</h2>
-        <p className="text-sm text-text-light mb-3">
-          Поделитесь ссылкой с друзьями — пригласите их в #тыжменеджер
-        </p>
-        <div className="flex gap-2">
-          <div className="flex-1 px-3 py-2 rounded-lg bg-bg border border-border text-text text-sm truncate">
-            https://tyzhmanager.ru?ref={referralCode}
-          </div>
-          <button
-            onClick={handleCopyReferral}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark
-                       transition-colors cursor-pointer font-medium text-sm"
-          >
-            📋 Копировать
-          </button>
-        </div>
-      </div>
-
-      {/* Промокод */}
-      <div className="bg-surface border border-border rounded-xl p-5 mb-6">
-        <h2 className="text-lg font-semibold text-text mb-3">🏷️ Промокод</h2>
-        <p className="text-sm text-text-light mb-3">
-          Введите промокод для активации дополнительных возможностей
-        </p>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={promoInput}
-            onChange={(e) => setPromoInput(e.target.value)}
-            placeholder="Введите промокод"
-            className="flex-1 px-3 py-2 rounded-lg border border-border bg-bg text-text
-                       placeholder-text-light/50 focus:outline-none focus:ring-2
-                       focus:ring-primary/30 focus:border-primary transition-colors"
-          />
-          <button
-            onClick={handleActivatePromo}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark
-                       transition-colors cursor-pointer font-medium text-sm"
-          >
-            Активировать
-          </button>
-        </div>
-      </div>
 
       {/* ═══ НАСТРОЙКИ ═══ */}
       <div className="mt-10 mb-6">

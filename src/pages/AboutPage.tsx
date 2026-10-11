@@ -34,7 +34,7 @@ export default function AboutPage() {
         </div>
       </div>
 
-      {/* ═══ ОБ АВТОРЕ (НОВАЯ РЕДАКЦИЯ) ═══ */}
+      {/* ═══ ОБ АВТОРЕ ═══ */}
       <div className="bg-surface border border-border rounded-xl p-5 mb-6">
         <h2 className="text-lg font-semibold text-text mb-3">👤 Об авторе</h2>
         <div className="flex items-start gap-4">
@@ -61,6 +61,31 @@ export default function AboutPage() {
         </div>
       </div>
 
+      {/* ═══ РЕАЛИЗАЦИЯ ═══ */}
+      <div className="bg-surface border border-border rounded-xl p-5 mb-6">
+        <h2 className="text-lg font-semibold text-text mb-3">🛠️ Реализация проекта</h2>
+        <div className="text-text-light leading-relaxed space-y-3">
+          <p>
+            Веб-приложение разработано{' '}
+            <span className="font-semibold text-text">Сергеем Дегтярёвым</span> с использованием
+            искусственного интеллекта (вайбкодинг).
+          </p>
+          <p>
+            Вайбкодинг — это современный подход к разработке, при котором автор проекта
+            формулирует идеи, логику и требования, а ИИ помогает воплотить их в код.
+            Все решения по архитектуре, дизайну, функциональности и контенту приняты автором.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">React</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">TypeScript</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">Tailwind CSS</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">Supabase</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">PWA</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">Yandex Cloud</span>
+          </div>
+        </div>
+      </div>
+
       {/* ═══ КНИГА — 3 ССЫЛКИ ═══ */}
       <div className="bg-surface border border-border rounded-xl p-5 mb-6">
         <h2 className="text-lg font-semibold text-text mb-3">📚 Где купить книгу</h2>
@@ -70,10 +95,10 @@ export default function AboutPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-primary/10
-                       hover:text-primary transition-colors group"
+                       transition-colors group"
           >
             <span className="text-xl">📕</span>
-            <span className="font-medium group-hover:text-primary">Яндекс Книги</span>
+            <span className="font-medium text-text group-hover:text-primary">Яндекс Книги</span>
             <span className="ml-auto text-text-light text-sm">↗</span>
           </a>
           <a
@@ -81,10 +106,10 @@ export default function AboutPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-primary/10
-                       hover:text-primary transition-colors group"
+                       transition-colors group"
           >
             <span className="text-xl">📗</span>
-            <span className="font-medium group-hover:text-primary">Ridero</span>
+            <span className="font-medium text-text group-hover:text-primary">Ridero</span>
             <span className="ml-auto text-text-light text-sm">↗</span>
           </a>
           <a
@@ -92,10 +117,10 @@ export default function AboutPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-primary/10
-                       hover:text-primary transition-colors group"
+                       transition-colors group"
           >
             <span className="text-xl">📘</span>
-            <span className="font-medium group-hover:text-primary">ЛитРес</span>
+            <span className="font-medium text-text group-hover:text-primary">ЛитРес</span>
             <span className="ml-auto text-text-light text-sm">↗</span>
           </a>
         </div>
@@ -119,10 +144,6 @@ export default function AboutPage() {
               <span className="text-lg leading-none mt-0.5">🤖</span>
               <span>ИИ-помощник, который поможет формулировать цели, строить планы действий,
               давать рекомендации и сопровождать пользователя на пути к результату.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="text-lg leading-none mt-0.5">☁️</span>
-              <span>Облачная синхронизация между устройствами.</span>
             </li>
             <li className="flex gap-3">
               <span className="text-lg leading-none mt-0.5">📱</span>
@@ -149,7 +170,7 @@ export default function AboutPage() {
       </div>
 
       {/* ═══ ПОДДЕРЖАТЬ ПРОЕКТ ═══ */}
-      <div className="bg-gradient-to-br from-primary/5 to-pink-500/5 border border-primary/20 rounded-xl p-5 mb-6">
+      <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-6">
         <h2 className="text-lg font-semibold text-text mb-3">❤️ Поддержать развитие проекта</h2>
         <div className="text-text-light leading-relaxed space-y-3">
           <p>
@@ -169,7 +190,7 @@ export default function AboutPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg
-                       hover:bg-primary-dark transition-colors font-medium cursor-pointer"
+                       hover:opacity-90 transition-opacity font-medium cursor-pointer"
           >
             <span>❤️</span>
             Поддержать проект
@@ -192,12 +213,12 @@ export default function AboutPage() {
             href="https://t.me/degtayrevtrener"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-blue-50
-                       hover:text-blue-600 transition-colors group"
+            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-primary/10
+                       transition-colors group"
           >
             <span className="text-xl">💬</span>
             <div>
-              <p className="font-medium group-hover:text-blue-600">Telegram-канал</p>
+              <p className="font-medium text-text group-hover:text-primary">Telegram-канал</p>
               <p className="text-xs text-text-light">@degtayrevtrener</p>
             </div>
             <span className="ml-auto text-text-light text-sm">↗</span>
@@ -206,12 +227,12 @@ export default function AboutPage() {
             href="https://t.me/degtyarev_trener"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-blue-50
-                       hover:text-blue-600 transition-colors group"
+            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-primary/10
+                       transition-colors group"
           >
             <span className="text-xl">✈️</span>
             <div>
-              <p className="font-medium group-hover:text-blue-600">Telegram (личный)</p>
+              <p className="font-medium text-text group-hover:text-primary">Telegram (личный)</p>
               <p className="text-xs text-text-light">@degtyarev_trener</p>
             </div>
             <span className="ml-auto text-text-light text-sm">↗</span>
@@ -220,27 +241,27 @@ export default function AboutPage() {
             href="https://vk.com/id22338891"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-blue-50
-                       hover:text-blue-600 transition-colors group"
+            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-primary/10
+                       transition-colors group"
           >
             <span className="text-xl">🔵</span>
             <div>
-              <p className="font-medium group-hover:text-blue-600">ВКонтакте</p>
+              <p className="font-medium text-text group-hover:text-primary">ВКонтакте</p>
               <p className="text-xs text-text-light">Профиль автора</p>
             </div>
             <span className="ml-auto text-text-light text-sm">↗</span>
           </a>
           <a
             href="mailto:Sergey.degtayrev@yandex.ru?subject=Письмо автору %23тыжменеджер"
-            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-amber-50
-                       hover:text-amber-600 transition-colors group"
+            className="flex items-center gap-3 px-4 py-3 bg-bg rounded-lg hover:bg-primary/10
+                       transition-colors group"
           >
             <span className="text-xl">✉️</span>
             <div>
-              <p className="font-medium group-hover:text-amber-600">Написать письмо</p>
+              <p className="font-medium text-text group-hover:text-primary">Написать письмо</p>
               <p className="text-xs text-text-light">Sergey.degtayrev@yandex.ru</p>
             </div>
-            <span className="ml-auto text-text-light text-sm">✉</span>
+            <span className="ml-auto text-text-light text-sm">↗</span>
           </a>
         </div>
       </div>
